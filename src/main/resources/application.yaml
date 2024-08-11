@@ -1,0 +1,9 @@
+ktor:
+  deployment:
+    port: 8080
+  application:
+    modules:
+      - cn.org.subit.SSubitOKt.init
+    id: "SSubitO"
+# 通过gradle的插件处理, 会自动替换为当前项目的版本号
+version: ${version}
