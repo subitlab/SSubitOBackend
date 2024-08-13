@@ -10,7 +10,7 @@ class Emails: SqlDao<Emails.EmailTable>(EmailTable)
     object EmailTable: IdTable<String>("emails")
     {
         val email = varchar("email", 100).entityId()
-        val user = reference("user", Users.UserTable.id).index()
+        val user = reference("user", Users.UserTable).index()
         override val id = email
         override val primaryKey = PrimaryKey(id)
     }

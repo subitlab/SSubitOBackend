@@ -8,7 +8,6 @@ import cn.org.subit.dataClasses.UserId
 import kotlinx.datetime.Instant
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.kotlin.datetime.CurrentTimestamp
 import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
 import org.koin.core.component.inject
@@ -23,7 +22,7 @@ class Users: SqlDao<Users.UserTable>(UserTable)
         override val id = userId("id").autoIncrement().entityId()
         val username = varchar("username", 100).index()
         val registrationTime = timestamp("registration_time").defaultExpression(CurrentTimestamp)
-        val permission = enumerationByName<Permission>("permission", 20)
+        val permission = enumerationByName<Permission>("permission", 20).default(Permission.NORMAL)
         val password = text("password")
         val lastPasswordChange = timestamp("last_password_change").defaultExpression(CurrentTimestamp)
         val phone = varchar("phone", 20).nullable()
@@ -43,28 +42,14 @@ class Users: SqlDao<Users.UserTable>(UserTable)
 
     suspend fun createUser(
         username: String,
-        password: String,
-        email: String
-    ): UserId? = query()
+        password: String
+    ): UserId = query()
     {
-        val isExist = table
-            .join(emails.table, JoinType.FULL, table.id, emails.table.user)
-            .join(studentIds.table, JoinType.FULL, table.id, studentIds.table.user)
-            .select(id)
-            .where { table.username eq username }
-            .orWhere { emails.table.email eq email }
-            .orWhere { studentIds.table.email eq email }
-            .singleOrNull() != null
-
-        if (isExist) return@query null
-
         val psw = JWTAuth.encryptPassword(password) // 加密密码
-        val userId = insertAndGetId {
+        insertAndGetId {
             it[UserTable.username] = username
             it[UserTable.password] = psw
         }.value
-        emails.addEmail(userId, email)
-        return@query userId
     }
 
     suspend fun getUser(id: UserId): UserInfo? = query()

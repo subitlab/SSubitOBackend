@@ -168,11 +168,12 @@ private suspend fun Context.register()
         )
     ) return call.respond(HttpStatus.WrongEmailCode)
     // 创建用户
+    if (get<Emails>().getEmailUsers(registerInfo.email) != null) return call.respond(HttpStatus.EmailExist)
     val id = get<Users>().createUser(
         username = registerInfo.username,
         password = registerInfo.password,
-        email = registerInfo.email,
-    ) ?: return call.respond(HttpStatus.EmailExist)
+    )
+    get<Emails>().addEmail(id, registerInfo.email)
     // 创建成功, 返回token
     val token = JWTAuth.makeToken(id)
     return call.respond(HttpStatus.OK, token)
