@@ -93,15 +93,15 @@ private suspend fun Context.postBind()
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val token = call.request.queryParameters["access_token"]
 
-    val url = URL("https://open.seiue.com/api/v3/oauth/me")
-    val connection = withContext(Dispatchers.IO) {
-        url.openConnection()
-    } as HttpURLConnection
-    connection.setRequestProperty("Authorization", "Bearer $token")
-    // GET
-    connection.requestMethod = "GET"
-    val result = runCatching { connection.inputStream.bufferedReader().readText() }.getOrNull()
-    if (result == null) return call.respond(HttpStatus.BadRequest.copy(message = "seiue token 无效"))
+    val result = withContext(Dispatchers.IO)
+    {
+        val url = URL("https://open.seiue.com/api/v3/oauth/me")
+        val connection = url.openConnection() as HttpURLConnection
+        connection.setRequestProperty("Authorization", "Bearer $token")
+        connection.requestMethod = "GET"
+        runCatching { connection.inputStream.bufferedReader().readText() }.getOrNull()
+    } ?: return call.respond(HttpStatus.BadRequest.copy(message = "seiue token 无效"))
+
     val seiue = StudentIds.json.decodeFromString(Seiue.serializer(), result)
     if (seiue.usin == null) return call.respond(HttpStatus.BadRequest.copy(message = "seiue token 无效(学号为空)"))
     val studentIds = get<StudentIds>()
