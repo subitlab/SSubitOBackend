@@ -18,7 +18,7 @@ fun Application.installApiDoc() = install(SwaggerUI)
     {
         title = "SSubitO后端API文档"
         version = cn.org.subit.version
-        description = "SubIT论坛后端API文档"
+        description = "SSubitO后端API文档"
     }
     server {
         url = "http://localhost:8080"

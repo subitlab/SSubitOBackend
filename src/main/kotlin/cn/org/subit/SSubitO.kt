@@ -11,8 +11,14 @@ import cn.org.subit.logger.SSubitOLogger
 import cn.org.subit.plugin.*
 import cn.org.subit.route.router
 import cn.org.subit.utils.Power
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
+import kotlinx.serialization.serializer
+import me.nullaqua.kotlin.reflect.jvmVoidInstance
+import me.nullaqua.kotlin.reflect.nothingInstance
 import java.io.File
 import kotlin.properties.Delegates
+import kotlin.reflect.typeOf
 
 lateinit var version: String
     private set

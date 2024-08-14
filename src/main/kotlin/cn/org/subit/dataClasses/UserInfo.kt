@@ -21,13 +21,13 @@ import org.koin.core.component.inject
 data class UserInfo(
     val id: UserId,
     val username: String,
-    val registrationTime: Instant,
+    val registrationTime: Long,
     val permission: Permission,
     val phone: String,
 ): Principal
 {
     fun toBasicUserInfo() = BasicUserInfo(id, username, registrationTime)
-    fun toUserFull(email: List<String>, studentId: List<String>) = UserFull(id, username, registrationTime, permission, phone, email, studentId)
+    fun toUserFull(email: List<String>, studentId: Map<String, String>) = UserFull(id, username, registrationTime, permission, phone, email, studentId)
     suspend fun toUserFull() = UserFull(
         id = id,
         username = username,
@@ -35,7 +35,7 @@ data class UserInfo(
         permission = permission,
         phone = phone,
         email = emails.getUserEmails(id),
-        studentId = studentIds.getUserStudentIds(id)
+        studentId = studentIds.getUserStudentIdAndName(id)
     )
 
     companion object: KoinComponent
@@ -53,16 +53,16 @@ data class UserInfo(
 data class UserFull(
     val id: UserId,
     val username: String,
-    val registrationTime: Instant,
+    val registrationTime: Long,
     val permission: Permission,
     val phone: String,
     val email: List<String>,
-    val studentId: List<String>,
+    val studentId: Map<String, String>,
 )
 
 @Serializable
 data class BasicUserInfo(
     val id: UserId,
     val username: String,
-    val registrationTime: Instant,
+    val registrationTime: Long,
 )

@@ -17,7 +17,6 @@ import cn.org.subit.console.AnsiStyle.Companion.RESET
 import cn.org.subit.console.SimpleAnsiColor.Companion.CYAN
 import cn.org.subit.console.SimpleAnsiColor.Companion.GREEN
 import cn.org.subit.console.SimpleAnsiColor.Companion.RED
-import cn.org.subit.dataClasses.OauthClientId
 import cn.org.subit.dataClasses.UserId
 import cn.org.subit.logger.SSubitOLogger
 import cn.org.subit.utils.Power.shutdown
@@ -173,7 +172,3 @@ abstract class WarpColumnType<Base: Any, T: Any>(
 // UserId
 class UserIdColumnType: WarpColumnType<Int, UserId>(IntegerColumnType(), ::UserId, UserId::value)
 fun Table.userId(name: String) = registerColumn(name, UserIdColumnType())
-
-// OauthClientId
-class OauthClientIdColumnType: WarpColumnType<Int, OauthClientId>(IntegerColumnType(), ::OauthClientId, OauthClientId::value)
-fun Table.oauthClientId(name: String) = registerColumn(name, OauthClientIdColumnType())

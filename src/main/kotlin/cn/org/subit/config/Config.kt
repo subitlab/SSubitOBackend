@@ -68,6 +68,7 @@ class ConfigLoader<T: Any> private constructor(
             apiDocsConfig
             emailConfig
             loggerConfig
+            systemConfig
 
             reloadAll()
         }

@@ -35,7 +35,7 @@ class Users: SqlDao<Users.UserTable>(UserTable)
     private fun deserialize(row: ResultRow) = UserInfo(
         id = row[UserTable.id].value,
         username = row[UserTable.username],
-        registrationTime = row[UserTable.registrationTime],
+        registrationTime = row[UserTable.registrationTime].toEpochMilliseconds(),
         permission = row[UserTable.permission],
         phone = row[UserTable.phone] ?: ""
     )
