@@ -52,6 +52,11 @@ class Users: SqlDao<Users.UserTable>(UserTable)
         }.value
     }
 
+    suspend fun setUsername(id: UserId, username: String): Boolean = query()
+    {
+        update({ UserTable.id eq id }) { it[UserTable.username] = username } > 0
+    }
+
     suspend fun getUser(id: UserId): UserInfo? = query()
     {
         selectAll().where { UserTable.id eq id }.singleOrNull()?.let(::deserialize)

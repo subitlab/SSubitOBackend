@@ -13,21 +13,19 @@ import cn.org.subit.logger.SSubitOLogger
 import cn.org.subit.route.Context
 import cn.org.subit.route.authenticated
 import cn.org.subit.route.get
-import cn.org.subit.utils.FileUtils
+import cn.org.subit.utils.*
 import io.github.smiley4.ktorswaggerui.dsl.routing.delete
 import io.github.smiley4.ktorswaggerui.dsl.routing.get
 import io.github.smiley4.ktorswaggerui.dsl.routing.post
 import io.ktor.http.*
 import io.ktor.server.routing.*
-import cn.org.subit.utils.HttpStatus
-import cn.org.subit.utils.respond
-import cn.org.subit.utils.statuses
 import io.github.smiley4.ktorswaggerui.dsl.routing.route
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
 import java.io.ByteArrayOutputStream
 import java.io.File
 import javax.imageio.ImageIO
@@ -62,6 +60,21 @@ fun Route.info() = route("", {
             statuses(HttpStatus.NotFound, HttpStatus.Unauthorized)
         }
     }) { getUserInfo() }
+
+    post("/username", {
+        description = "修改用户名"
+        request {
+            authenticated(true)
+            body<ChangeUsername>()
+            {
+                required = true
+                description = "新用户名"
+            }
+        }
+        response {
+            statuses(HttpStatus.OK, HttpStatus.UsernameFormatError)
+        }
+    }) { changeUsername() }
 
     post("/avatar/{id}", {
         description = "修改头像, 修改他人头像要求user权限在ADMIN以上"
@@ -212,4 +225,16 @@ private suspend fun Context.getAvatar()
         ImageIO.write(avatar, "png", output)
         output.toByteArray()
     }
+}
+
+@Serializable
+private data class ChangeUsername(val username: String)
+
+private suspend fun Context.changeUsername()
+{
+    val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
+    val username = call.receive<ChangeUsername>().username
+    if (!checkUsername(username)) return call.respond(HttpStatus.UsernameFormatError)
+    get<Users>().setUsername(loginUser.id, username)
+    return call.respond(HttpStatus.OK)
 }
