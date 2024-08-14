@@ -44,11 +44,12 @@ object CommandSet: TreeCommand(
     /**
      * 命令提示符, 上一次成功为青色, 失败为红色
      */
-    private val prompt: String = parsePrompt("SSubitO > ")
-    private val rightPrompt: String = parsePrompt("<| POWERED BY SUBIT |>")
+    private val prompt: String get() = parsePrompt("FORUM > ")
+    private val rightPrompt: String get() = parsePrompt("<| POWERED BY SUBIT |>")
 
     fun Application.startCommandThread() = CoroutineScope(Dispatchers.IO).launch()
     {
+        if (Console.lineReader == null) return@launch
         var line: String? = null
         while (true) try
         {
@@ -112,7 +113,7 @@ object CommandSet: TreeCommand(
         {
             if (b == '\n'.code)
             {
-                Console.println("${SimpleAnsiColor.PURPLE.bright()}[COMMAND]$style$level$RESET $arrayOutputStream")
+                Console.println("${SimpleAnsiColor.PURPLE.bright()}[COMMAND]$style$level$RESET $arrayOutputStream$RESET")
                 arrayOutputStream.reset()
             }
             else
