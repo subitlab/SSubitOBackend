@@ -51,7 +51,16 @@ fun Route.info() = route("", {
         response {
             statuses<UserFull>(
                 HttpStatus.OK.copy(message = "获取完整用户信息成功"),
-                bodyDescription = "当id为0, 即获取当前用户信息或user权限不低于ADMIN时返回"
+                bodyDescription = "当id为0, 即获取当前用户信息或user权限不低于ADMIN时返回",
+                example = UserFull(
+                    id = UserId(1),
+                    email = listOf("email1@example.com", "email2@example.com", "email3@example.com"),
+                    phone = "12345678901",
+                    username = "username",
+                    studentId = mapOf("studentId1" to "realName1", "studentId2" to "realName2"),
+                    permission = Permission.NORMAL,
+                    registrationTime = System.currentTimeMillis()
+                )
             )
             statuses<BasicUserInfo>(
                 HttpStatus.OK.copy(message = "获取基础用户的信息成功"),

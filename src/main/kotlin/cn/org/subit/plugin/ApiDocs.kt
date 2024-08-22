@@ -20,9 +20,6 @@ fun Application.installApiDoc() = install(SwaggerUI)
         version = cn.org.subit.version
         description = "SSubitO后端API文档"
     }
-    server {
-        url = "http://localhost:8080"
-    }
     this.ignoredRouteSelectors += RateLimitRouteSelector::class
     schemas {
         generator = {

@@ -1,10 +1,10 @@
 package cn.org.subit.utils
 
+import cn.org.subit.config.emailConfig
+import cn.org.subit.database.EmailCodes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import cn.org.subit.config.emailConfig
-import cn.org.subit.database.EmailCodes
 import java.util.*
 import javax.mail.Address
 import javax.mail.Message
@@ -71,7 +71,7 @@ fun sendEmail(email: String, code: String, usage: EmailCodes.EmailCodeUsage) = s
     multipart.addBodyPart(bodyPart)
     message.setContent(multipart)
     val transport = session.getTransport("smtp")
-    transport.connect(emailConfig.host, emailConfig.sender, emailConfig.password)
+    transport.connect(emailConfig.host, emailConfig.port, emailConfig.sender, emailConfig.password)
     transport.sendMessage(message, arrayOf<Address>(InternetAddress(email)))
     transport.close()
 }

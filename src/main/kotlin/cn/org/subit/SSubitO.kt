@@ -109,6 +109,8 @@ fun Application.init()
 {
     version = environment.config.property("version").getString()
 
+    if (debug) SSubitOLogger.globalLogger.warning("Debug mode is enabled")
+
     Loader.getResource("logo/SubIT-logo.txt")
         ?.bufferedReader()
         ?.use { it.readText().split("\n").forEach(SSubitOLogger.globalLogger::info) }
