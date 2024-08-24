@@ -152,6 +152,7 @@ fun Route.basic() = route("/auth", {
 
 @Serializable
 private data class RegisterInfo(val username: String, val password: String, val email: String, val code: String)
+private val registerLocks = Locks<String>()
 
 private suspend fun Context.register()
 {
@@ -167,13 +168,19 @@ private suspend fun Context.register()
             EmailCodes.EmailCodeUsage.REGISTER
         )
     ) return call.respond(HttpStatus.WrongEmailCode)
-    // 创建用户
-    if (get<Emails>().getEmailUsers(registerInfo.email) != null) return call.respond(HttpStatus.EmailExist)
-    val id = get<Users>().createUser(
-        username = registerInfo.username,
-        password = registerInfo.password,
-    )
-    get<Emails>().addEmail(id, registerInfo.email)
+
+    val id = registerLocks.withLock(registerInfo.email)
+    {
+        // 创建用户
+        if (get<Emails>().getEmailUsers(registerInfo.email) != null) return call.respond(HttpStatus.EmailExist)
+        val id = get<Users>().createUser(
+            username = registerInfo.username,
+            password = registerInfo.password,
+        )
+        get<Emails>().addEmail(id, registerInfo.email)
+        id
+    }
+
     // 创建成功, 返回token
     val token = JWTAuth.makeToken(id)
     return call.respond(HttpStatus.OK, token)

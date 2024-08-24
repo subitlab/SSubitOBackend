@@ -4,13 +4,16 @@ package cn.org.subit.route.seiue
 
 import cn.org.subit.JWTAuth.getLoginUser
 import cn.org.subit.config.systemConfig
+import cn.org.subit.dataClasses.UserId
 import cn.org.subit.database.StudentIds
 import cn.org.subit.route.Context
 import cn.org.subit.route.authenticated
 import cn.org.subit.route.get
 import cn.org.subit.utils.HttpStatus
+import cn.org.subit.utils.Locks
 import cn.org.subit.utils.respond
 import cn.org.subit.utils.statuses
+import io.github.smiley4.ktorswaggerui.dsl.routing.delete
 import io.github.smiley4.ktorswaggerui.dsl.routing.get
 import io.github.smiley4.ktorswaggerui.dsl.routing.post
 import io.github.smiley4.ktorswaggerui.dsl.routing.route
@@ -47,6 +50,21 @@ fun Route.seiue() = route("/seiue", {
             statuses(HttpStatus.OK, HttpStatus.EmailExist.copy(message = "学号已存在"), HttpStatus.BadRequest)
         }
     }) { postBind() }
+
+    delete("/bind", {
+        description = "解绑学号"
+        request {
+            authenticated(true)
+            queryParameter<String>("studentId")
+            {
+                required = true
+                description = "学号"
+            }
+        }
+        response {
+            statuses(HttpStatus.OK, HttpStatus.BadRequest)
+        }
+    }) { deleteBind() }
 }
 
 @Suppress("PropertyName")
@@ -95,9 +113,11 @@ private suspend fun Context.postBind()
 
     val result = withContext(Dispatchers.IO)
     {
+        @Suppress("DEPRECATION")
         val url = URL("https://open.seiue.com/api/v3/oauth/me")
         val connection = url.openConnection() as HttpURLConnection
         connection.setRequestProperty("Authorization", "Bearer $token")
+        connection.setRequestProperty("X-School-Id", systemConfig.schoolId.toString())
         connection.requestMethod = "GET"
         runCatching { connection.inputStream.bufferedReader().readText() }.getOrNull()
     } ?: return call.respond(HttpStatus.BadRequest.copy(message = "seiue token 无效"))
@@ -114,5 +134,24 @@ private suspend fun Context.postBind()
     {
         studentIds.addStudentId(loginUser.id, seiue.usin, seiue.name, seiue)
         return call.respond(HttpStatus.OK, "学号添加成功")
+    }
+}
+
+private val deleteBindLocks = Locks<UserId>()
+
+private suspend fun Context.deleteBind()
+{
+    val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
+    val studentId = call.request.queryParameters["studentId"] ?: return call.respond(HttpStatus.BadRequest)
+    val studentIds = get<StudentIds>()
+
+    deleteBindLocks.withLock<Nothing>(loginUser.id)
+    {
+        if (studentIds.getStudentIdCount(loginUser.id) >= 2)
+        {
+            if (studentIds.removeStudentId(loginUser.id, studentId)) return call.respond(HttpStatus.OK)
+            else return call.respond(HttpStatus.NotFound)
+        }
+        else return call.respond(HttpStatus.BadRequest.copy(message = "无法解绑唯一的希悦账号"))
     }
 }

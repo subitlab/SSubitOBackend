@@ -13,5 +13,5 @@ import io.ktor.server.request.*
 fun Application.installDoubleReceive() = install(DoubleReceive)
 {
     cacheRawRequest = true
-    useFileForCache { it.request.contentType().match(ContentType.Application.Json) }
+    useFileForCache { !it.request.contentType().match(ContentType.Application.Json) }
 }

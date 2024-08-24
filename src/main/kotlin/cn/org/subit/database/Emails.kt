@@ -22,14 +22,14 @@ class Emails: SqlDao<Emails.EmailTable>(EmailTable)
 
     suspend fun getEmailUsers(email: String): UserId? = query()
     {
-        select(user).where { table.email eq email }.singleOrNull()?.get(user)?.value
+        select(user).where { table.email eq email.lowercase() }.singleOrNull()?.get(user)?.value
     }
 
     suspend fun addEmail(userId: UserId, email: String) = query()
     {
         insert {
             it[user] = userId
-            it[this.email] = email
+            it[this.email] = email.lowercase()
         }
     }
 }

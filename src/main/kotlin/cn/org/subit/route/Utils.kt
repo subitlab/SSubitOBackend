@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package cn.org.subit.route
 
 import io.github.smiley4.ktorswaggerui.data.ValueExampleDescriptor

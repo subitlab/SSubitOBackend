@@ -14,7 +14,7 @@ val schema_kenerator: String by project
 plugins {
     kotlin("jvm") version "2.0.10"
     kotlin("plugin.serialization") version "2.0.10"
-    id("io.ktor.plugin") version "2.3.12"
+    id("io.ktor.plugin") version "2.3.11"
 }
 
 group = "cn.org.subit"
@@ -61,6 +61,8 @@ dependencies {
     //postgresql
     val pg_version: String by project
     implementation("com.impossibl.pgjdbc-ng:pgjdbc-ng:$pg_version")
+    val postgresql_version: String by project
+    implementation("org.postgresql:postgresql:$postgresql_version")
 
     //数据库
     implementation("org.jetbrains.exposed:exposed-core:$exposed_version") // 数据库

@@ -14,12 +14,11 @@ import com.auth0.jwt.interfaces.Payload
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.util.pipeline.*
-import kotlinx.datetime.Clock
-import kotlinx.datetime.toJavaInstant
-import kotlinx.datetime.toKotlinInstant
+import kotlinx.datetime.*
 import kotlinx.serialization.Serializable
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import java.time.OffsetDateTime
 import java.util.*
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
@@ -79,9 +78,9 @@ object JWTAuth: KoinComponent
     fun makeToken(id: UserId): Token = JWT.create()
         .withSubject("Authentication")
         .withClaim("id", id.value)
-        .withExpiresAt((Clock.System.now() + VALIDITY).toJavaInstant())
+        .withExpiresAt((OffsetDateTime.now().toInstant().toKotlinInstant() + VALIDITY).toJavaInstant())
         .withIssuer("subit")
-        .withIssuedAt(Clock.System.now().toJavaInstant())
+        .withIssuedAt(OffsetDateTime.now().toInstant().toKotlinInstant().toJavaInstant())
         .sign(algorithm)
         .let(::Token)
 
@@ -90,7 +89,9 @@ object JWTAuth: KoinComponent
         val (userFull, lastPswChange) =
             users.getUserWithLastPasswordChange(token.getClaim("id").asInt().let(::UserId)) ?: return null
 
-        if (lastPswChange > token.issuedAtAsInstant.toKotlinInstant()) return null
+        val tokenTime = token.issuedAtAsInstant.toKotlinInstant()
+
+        if (lastPswChange > tokenTime) return null
         return userFull
     }
 

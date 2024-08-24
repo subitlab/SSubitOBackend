@@ -159,7 +159,7 @@ fun Route.info() = route("", {
 
 private suspend fun Context.getUserInfo()
 {
-    val id = call.parameters["id"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.NotFound)
+    val id = call.parameters["id"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val loginUser = getLoginUser()
     logger.config("user=${loginUser?.id} get user info id=$id")
     if (id == UserId(0))
@@ -228,7 +228,7 @@ private suspend fun Context.getAvatar()
         else it
     }
     val avatar = FileUtils.getAvatar(id)
-    call.respondBytes(ContentType.Image.Any, HttpStatusCode.OK)
+    call.respondBytes(ContentType.Image.PNG, HttpStatusCode.OK)
     {
         val output = ByteArrayOutputStream()
         ImageIO.write(avatar, "png", output)

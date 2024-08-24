@@ -8,6 +8,7 @@ import io.ktor.server.request.*
 import cn.org.subit.logger.SSubitOLogger
 import cn.org.subit.utils.HttpStatus
 import cn.org.subit.utils.respond
+import io.ktor.server.response.*
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -41,4 +42,13 @@ fun Application.installStatusPages() = install(StatusPages)
             return@status call.respond(HttpStatus.TooManyRequests.copy(message = "请求过于频繁, 请${time}后再试"))
         type.customResponse(call, time)
     }
+
+    status(HttpStatusCode.Unauthorized)
+    { _ ->
+        // 如果不是api docs还没有返回体的话, 说明是携带了token但token不合法, 返回401
+        if (!call.request.path().startsWith("/api-docs") && call.response.responseType == null)
+            call.respond(HttpStatus.Unauthorized)
+    }
+
+
 }

@@ -7,6 +7,7 @@ import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import cn.org.subit.utils.HttpStatus
+import cn.org.subit.utils.respond
 import java.util.*
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
@@ -41,7 +42,9 @@ sealed interface RateLimit
          * 按照请求体中的邮箱及其用途来限制. 如果接收不到请求体的话应该会返回BadRequest, 所以这里通过随机UUID来不限制
          */
         override suspend fun getKey(call: ApplicationCall): Any =
-            runCatching { call.receive<EmailInfo>() }.getOrNull() ?: UUID.randomUUID()
+            runCatching {
+                call.receive<EmailInfo>().let { it.copy(email = it.email.lowercase()) }
+            }.getOrNull() ?: UUID.randomUUID()
     }
 }
 

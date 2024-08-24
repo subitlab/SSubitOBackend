@@ -2,6 +2,7 @@ package cn.org.subit.dataClasses
 
 import kotlinx.serialization.Serializable
 
+@Suppress("unused")
 @JvmInline
 @Serializable
 value class UserId(val value: Int): Comparable<UserId>

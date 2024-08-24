@@ -1,6 +1,5 @@
 package cn.org.subit.console.command
 
-import cn.org.subit.console.command.Command
 import cn.org.subit.utils.Power
 
 /**

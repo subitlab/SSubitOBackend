@@ -43,12 +43,15 @@ fun checkUserInfo(username: String, password: String, email: String): HttpStatus
     return HttpStatus.OK
 }
 
+@Suppress("unused")
 fun String?.toUUIDOrNull(): UUID? = runCatching { UUID.fromString(this) }.getOrNull()
 
 private val sendEmailScope = CoroutineScope(Dispatchers.IO)
 
 fun sendEmail(email: String, code: String, usage: EmailCodes.EmailCodeUsage) = sendEmailScope.async()
 {
+    @Suppress("NAME_SHADOWING")
+    val email = email.lowercase()
     val props = Properties()
     props.setProperty("mail.smtp.auth", "true")
     props.setProperty("mail.host", emailConfig.host)

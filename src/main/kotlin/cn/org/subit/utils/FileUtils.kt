@@ -19,9 +19,7 @@ object FileUtils
     private val logger = SSubitOLogger.getLogger()
     private val avatarFolder = File(dataFolder, "/avatars")
     private val defaultAvatarFolder = File(avatarFolder, "default")
-    private val iconFolder = File(dataFolder, "/icons")
     private const val AVATAR_SIZE = 1024
-    private const val ICON_SIZE = 1024
 
     init
     {

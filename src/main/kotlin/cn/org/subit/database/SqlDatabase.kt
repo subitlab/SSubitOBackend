@@ -1,5 +1,12 @@
 package cn.org.subit.database
 
+import cn.org.subit.console.AnsiStyle.Companion.RESET
+import cn.org.subit.console.SimpleAnsiColor.Companion.CYAN
+import cn.org.subit.console.SimpleAnsiColor.Companion.GREEN
+import cn.org.subit.console.SimpleAnsiColor.Companion.RED
+import cn.org.subit.dataClasses.UserId
+import cn.org.subit.logger.SSubitOLogger
+import cn.org.subit.utils.Power.shutdown
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.ktor.server.application.*
@@ -9,20 +16,12 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
 import org.koin.core.component.inject
+import org.koin.core.module.dsl.singleOf
 import org.koin.core.qualifier.named
 import org.koin.dsl.bind
 import org.koin.dsl.module
-import cn.org.subit.console.AnsiStyle.Companion.RESET
-import cn.org.subit.console.SimpleAnsiColor.Companion.CYAN
-import cn.org.subit.console.SimpleAnsiColor.Companion.GREEN
-import cn.org.subit.console.SimpleAnsiColor.Companion.RED
-import cn.org.subit.dataClasses.UserId
-import cn.org.subit.logger.SSubitOLogger
-import cn.org.subit.utils.Power.shutdown
-import org.koin.core.component.get
-import org.koin.core.module.dsl.singleOf
-import org.koin.dsl.single
 import java.sql.Driver
 
 /**

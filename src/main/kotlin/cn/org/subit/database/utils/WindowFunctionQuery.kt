@@ -1,8 +1,8 @@
-package subit.database.sqlImpl.utils
+package cn.org.subit.database.utils
 
 import org.jetbrains.exposed.sql.*
-import subit.database.sqlImpl.utils.WindowFunctionQuery.Companion.rowNumber
-import subit.database.sqlImpl.utils.WindowFunctionQuery.Companion.totalCount
+import cn.org.subit.database.utils.WindowFunctionQuery.Companion.rowNumber
+import cn.org.subit.database.utils.WindowFunctionQuery.Companion.totalCount
 import java.util.*
 
 /**

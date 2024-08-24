@@ -6,9 +6,6 @@ import cn.org.subit.utils.sendEmail
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
-import kotlinx.datetime.DateTimeUnit
-import kotlinx.datetime.plus
 import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
@@ -16,8 +13,8 @@ import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.kotlin.datetime.CurrentTimestamp
-import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
+import org.jetbrains.exposed.sql.kotlin.datetime.timestampWithTimeZone
+import java.time.OffsetDateTime
 
 class EmailCodes: SqlDao<EmailCodes.EmailsTable>(EmailsTable)
 {
@@ -25,7 +22,7 @@ class EmailCodes: SqlDao<EmailCodes.EmailsTable>(EmailsTable)
     {
         val email = varchar("email", 100).index()
         val code = varchar("code", 10)
-        val time = timestamp("time").index()
+        val time = timestampWithTimeZone("time").index()
         val usage = enumerationByName<EmailCodeUsage>("usage", 20)
     }
 
@@ -56,10 +53,10 @@ class EmailCodes: SqlDao<EmailCodes.EmailsTable>(EmailsTable)
     suspend fun addEmailCode(email: String, code: String, usage: EmailCodeUsage): Unit = query()
     {
         insert {
-            it[EmailsTable.email] = email
+            it[EmailsTable.email] = email.lowercase()
             it[EmailsTable.code] = code
             it[EmailsTable.usage] = usage
-            it[time] = Clock.System.now().plus(emailConfig.codeValidTime, unit = DateTimeUnit.SECOND)
+            it[time] = OffsetDateTime.now().plusSeconds(emailConfig.codeValidTime)
         }
     }
 
@@ -68,6 +65,8 @@ class EmailCodes: SqlDao<EmailCodes.EmailsTable>(EmailsTable)
      */
     suspend fun verifyEmailCode(email: String, code: String, usage: EmailCodeUsage): Boolean = query()
     {
+        @Suppress("NAME_SHADOWING")
+        val email = email.lowercase()
         val result = select(time).where {
             (EmailsTable.email eq email) and (EmailsTable.code eq code) and (EmailsTable.usage eq usage)
         }.singleOrNull()?.let { it[time] }
@@ -79,12 +78,12 @@ class EmailCodes: SqlDao<EmailCodes.EmailsTable>(EmailsTable)
             }
         }
 
-        result != null && result >= Clock.System.now()
+        result != null && result >= OffsetDateTime.now()
     }
 
     private suspend fun clearExpiredEmailCode(): Unit = query()
     {
-        EmailsTable.deleteWhere { time lessEq CurrentTimestamp }
+        EmailsTable.deleteWhere { time lessEq OffsetDateTime.now() }
     }
 }
 
@@ -92,6 +91,8 @@ private val logger = SSubitOLogger.getLogger()
 
 suspend fun EmailCodes.sendEmailCode(email: String, usage: EmailCodes.EmailCodeUsage)
 {
+    @Suppress("NAME_SHADOWING")
+    val email = email.lowercase()
     val code = (1..6).map { ('0'..'9').random() }.joinToString("")
     sendEmail(email, code, usage).invokeOnCompletion {
         if (it != null) logger.severe("发送邮件失败: email: $email, usage: $usage", it)

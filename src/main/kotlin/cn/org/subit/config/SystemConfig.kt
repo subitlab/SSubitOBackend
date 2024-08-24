@@ -1,6 +1,5 @@
 package cn.org.subit.config
 
-import cn.org.subit.logger.SSubitOLogger
 import kotlinx.serialization.Serializable
 
 @Serializable

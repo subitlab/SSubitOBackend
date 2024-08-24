@@ -3,13 +3,15 @@ package cn.org.subit.database
 import cn.org.subit.JWTAuth
 import cn.org.subit.dataClasses.Permission
 import cn.org.subit.dataClasses.Slice.Companion.singleOrNull
-import cn.org.subit.dataClasses.UserInfo
 import cn.org.subit.dataClasses.UserId
+import cn.org.subit.dataClasses.UserInfo
+import cn.org.subit.utils.Locks
 import kotlinx.datetime.Instant
+import kotlinx.datetime.toKotlinInstant
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.kotlin.datetime.CurrentTimestamp
-import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
+import org.jetbrains.exposed.sql.kotlin.datetime.CurrentTimestampWithTimeZone
+import org.jetbrains.exposed.sql.kotlin.datetime.timestampWithTimeZone
 import org.koin.core.component.inject
 
 class Users: SqlDao<Users.UserTable>(UserTable)
@@ -21,21 +23,20 @@ class Users: SqlDao<Users.UserTable>(UserTable)
     {
         override val id = userId("id").autoIncrement().entityId()
         val username = varchar("username", 100).index()
-        val registrationTime = timestamp("registration_time").defaultExpression(CurrentTimestamp)
+        val registrationTime = timestampWithTimeZone("registration_time").defaultExpression(CurrentTimestampWithTimeZone)
         val permission = enumerationByName<Permission>("permission", 20).default(Permission.NORMAL)
         val password = text("password")
-        val lastPasswordChange = timestamp("last_password_change").defaultExpression(CurrentTimestamp)
+        val lastPasswordChange = timestampWithTimeZone("last_password_change").defaultExpression(CurrentTimestampWithTimeZone)
         val phone = varchar("phone", 20).nullable()
         override val primaryKey = PrimaryKey(id)
     }
 
-    val emails: Emails by inject()
-    val studentIds: StudentIds by inject()
+    private val emails: Emails by inject()
 
     private fun deserialize(row: ResultRow) = UserInfo(
         id = row[UserTable.id].value,
         username = row[UserTable.username],
-        registrationTime = row[UserTable.registrationTime].toEpochMilliseconds(),
+        registrationTime = row[UserTable.registrationTime].toInstant().toEpochMilli(),
         permission = row[UserTable.permission],
         phone = row[UserTable.phone] ?: ""
     )
@@ -67,7 +68,7 @@ class Users: SqlDao<Users.UserTable>(UserTable)
         val psw = JWTAuth.encryptPassword(password) // 加密密码
         update({ UserTable.id eq id }) {
             it[UserTable.password] = psw
-            it[lastPasswordChange] = CurrentTimestamp
+            it[lastPasswordChange] = CurrentTimestampWithTimeZone
         } > 0
     }
 
@@ -76,7 +77,11 @@ class Users: SqlDao<Users.UserTable>(UserTable)
         val psw = JWTAuth.encryptPassword(password) // 加密密码
         table
             .join(emails.table, JoinType.RIGHT, table.id, emails.table.user)
-            .update({ emails.table.email eq email }) { it[UserTable.password] = psw } > 0
+            .update({ emails.table.email eq email.lowercase() })
+            {
+                it[UserTable.password] = psw
+                it[lastPasswordChange] = CurrentTimestampWithTimeZone
+            } > 0
     }
 
     /**
@@ -84,7 +89,9 @@ class Users: SqlDao<Users.UserTable>(UserTable)
      */
     suspend fun getUserWithLastPasswordChange(id: UserId): Pair<UserInfo, Instant>? = query()
     {
-        selectAll().where { UserTable.id eq id }.singleOrNull()?.let { deserialize(it) to it[lastPasswordChange] }
+        selectAll().where { UserTable.id eq id }.singleOrNull()?.let {
+            deserialize(it) to it[lastPasswordChange].toInstant().toKotlinInstant()
+        }
     }
 
     /**
@@ -110,7 +117,7 @@ class Users: SqlDao<Users.UserTable>(UserTable)
         val (id, psw) = table
             .join(emails.table, JoinType.RIGHT, table.id, emails.table.user)
             .select(table.password, table.id)
-            .where { emails.table.email eq email }
+            .where { emails.table.email eq email.lowercase() }
             .singleOrNull()?.let { it[table.id].value to it[table.password] } ?: return@query null
         return@query if (JWTAuth.verifyPassword(password, psw)) id else null
     }

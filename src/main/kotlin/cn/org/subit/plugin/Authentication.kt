@@ -15,12 +15,12 @@ fun Application.installAuthentication() = install(Authentication)
     // 初始化jwt验证
     this@installAuthentication.initJwtAuth()
     // jwt验证, 这个验证是用于论坛正常的用户登陆
-    jwt("forum-auth")
+    jwt("ssubito-auth")
     {
         verifier(JWTAuth.makeJwtVerifier()) // 设置验证器
         validate() // 设置验证函数
         {
-            return@validate JWTAuth.checkToken(it.payload)
+            runCatching { JWTAuth.checkToken(it.payload) }.getOrNull()
         }
     }
 

@@ -1,10 +1,12 @@
+@file:Suppress("unused")
+
 package cn.org.subit.dataClasses
 
 import cn.org.subit.dataClasses.Slice.Companion.asSlice
 import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.sql.Query
 import org.jetbrains.exposed.sql.ResultRow
-import subit.database.sqlImpl.utils.WindowFunctionQuery
+import cn.org.subit.database.utils.WindowFunctionQuery
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
