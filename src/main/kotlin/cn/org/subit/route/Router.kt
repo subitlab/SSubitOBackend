@@ -13,9 +13,11 @@ import io.ktor.server.routing.*
 
 fun Application.router() = routing()
 {
+    val rootPath = this.application.environment.rootPath
+
     get("/", { hidden = true })
     {
-        call.respondRedirect("/api-docs")
+        call.respondRedirect("$rootPath/api-docs")
     }
 
     authenticate("auth-api-docs")
@@ -26,7 +28,7 @@ fun Application.router() = routing()
             {
                 openApiSpec()
             }
-            swaggerUI("/api-docs/api.json")
+            swaggerUI("$rootPath/api-docs/api.json")
         }
     }
 

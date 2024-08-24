@@ -7,16 +7,17 @@ import cn.org.subit.plugin.*
 import cn.org.subit.route.router
 import cn.org.subit.utils.Power
 import io.ktor.server.application.*
-import io.ktor.server.config.*
-import io.ktor.server.config.ConfigLoader.Companion.load
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+import net.mamoe.yamlkt.Yaml
 import java.io.File
 import kotlin.properties.Delegates
 
 lateinit var version: String
     private set
 lateinit var workDir: File
+    private set
+lateinit var dataDir: File
     private set
 var debug by Delegates.notNull<Boolean>()
     private set
@@ -40,6 +41,10 @@ private fun parseCommandLineArgs(args: Array<String>): Pair<Array<String>, File>
     workDir = File(argsMap["-workDir"] ?: ".")
     workDir.mkdirs()
 
+    // 配置文件目录
+    dataDir = argsMap["-dataDir"]?.let { File(it) } ?: File(workDir, "data")
+    dataDir.mkdirs()
+
     // 是否开启debug模式
     debug = argsMap["-debug"]?.toBoolean() ?: false
     System.setProperty("io.ktor.development", "$debug")
@@ -47,13 +52,11 @@ private fun parseCommandLineArgs(args: Array<String>): Pair<Array<String>, File>
     // 去除命令行中的-config参数, 因为ktor会解析此参数进而不加载打包的application.yaml
     // 其余参数还原为字符串数组
     val resArgs = argsMap.entries
-        .filterNot { it.key == "-config" || it.key == "-workDir" || it.key == "-debug" }
+        .filterNot { it.key == "-config" || it.key == "-workDir" || it.key == "-debug" || it.key == "-dataDir" }
         .map { (k, v) -> "$k=$v" }
         .toTypedArray()
     // 命令行中输入的自定义配置文件
-    // 如果输入的绝对路径, 则直接使用, 否则在工作目录下寻找
-    val configFileName = argsMap["-config"] ?: "config.yaml"
-    val configFile = if (configFileName.startsWith("/")) File(configFileName) else File(workDir, configFileName)
+    val configFile = argsMap["-config"]?.let { File(it) } ?: File(workDir, "config.yaml")
 
     return resArgs to configFile
 }
@@ -80,14 +83,22 @@ fun main(args: Array<String>)
         return
     }
 
-    // 加载主配置文件
-    val customConfig = ConfigLoader.load(configFile.path)
+    val defaultConfig = Loader.getResource("application.yaml") ?: error("application.yaml not found")
+    val customConfig = configFile.inputStream()
+
+    val resConfig = Loader.mergeConfigs(defaultConfig, customConfig)
+    // 创建一个临时文件, 用于存储合并后的配置文件
+    val tempFile = File.createTempFile("resConfig", ".yaml")
+    tempFile.writeText(Yaml.encodeToString(resConfig))
+    println(tempFile.readText())
+
+    val resArgs = args1 + "-config=${tempFile.absolutePath}"
 
     // 生成环境
-    val environment = commandLineEnvironment(args = args1)
+    val environment = commandLineEnvironment(args = resArgs)
     {
-        // 将打包的application.yaml与命令行中提供的配置文件(没提供某人config.yaml)合并
-        this.config = this.config.withFallback(customConfig)
+        SSubitOLogger.getLogger().info("rootPath: ${this.rootPath}")
+        SSubitOLogger.getLogger().info("port: ${this.config}")
     }
     // 启动服务器
     embeddedServer(Netty, environment).start(wait = true)

@@ -65,10 +65,10 @@ class ConfigLoader<T: Any> private constructor(
         private val logger by lazy { SSubitOLogger.getLogger() }
         fun init() // 初始化所有配置
         {
-            apiDocsConfig
-            emailConfig
-            loggerConfig
-            systemConfig
+            (::apiDocsConfig).getDelegate() as ConfigLoader<*>
+            (::emailConfig).getDelegate() as ConfigLoader<*>
+            (::loggerConfig).getDelegate() as ConfigLoader<*>
+            (::systemConfig).getDelegate() as ConfigLoader<*>
 
             reloadAll()
         }

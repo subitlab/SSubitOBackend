@@ -24,14 +24,10 @@ fun Application.installStatusPages() = install(StatusPages)
             .warning("出现位置错误, 访问接口: ${call.request.path()}", throwable)
         call.respond(HttpStatus.InternalServerError)
     }
-    /** 包装一层, 因为正常的返回没有body, 但是这里需要返回一个body, 见[HttpStatus] */
-    status(HttpStatusCode.NotFound) { _ -> call.respond(HttpStatus.NotFound) }
-    status(HttpStatusCode.Forbidden) { _ -> call.respond(HttpStatus.Forbidden) }
-    status(HttpStatusCode.BadRequest) { _ -> call.respond(HttpStatus.BadRequest) }
-    status(HttpStatusCode.InternalServerError) { _ -> call.respond(HttpStatus.InternalServerError) }
 
     /** 针对请求过于频繁的处理, 详见[RateLimit] */
-    status(HttpStatusCode.TooManyRequests) { _ ->
+    status(HttpStatusCode.TooManyRequests)
+    { _ ->
         val time = call.response.headers[HttpHeaders.RetryAfter]?.toLongOrNull()?.seconds
         val typeName = call.response.headers["X-RateLimit-Type"]
         val type = RateLimit.list.find { it.rawRateLimitName == typeName }
@@ -45,8 +41,9 @@ fun Application.installStatusPages() = install(StatusPages)
 
     status(HttpStatusCode.Unauthorized)
     { _ ->
+        val rootPath = this.call.application.environment.rootPath
         // 如果不是api docs还没有返回体的话, 说明是携带了token但token不合法, 返回401
-        if (!call.request.path().startsWith("/api-docs") && call.response.responseType == null)
+        if (!call.request.path().startsWith("$rootPath/api-docs") && call.response.responseType == null)
             call.respond(HttpStatus.Unauthorized)
     }
 

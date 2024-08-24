@@ -1,5 +1,10 @@
 package cn.org.subit.console
 
+import cn.org.subit.console.command.CommandSet
+import cn.org.subit.console.command.CommandSet.err
+import cn.org.subit.dataDir
+import cn.org.subit.logger.SSubitOLogger.nativeOut
+import cn.org.subit.utils.Power
 import org.jline.reader.LineReader
 import org.jline.reader.LineReaderBuilder
 import org.jline.reader.impl.LineReaderImpl
@@ -7,11 +12,6 @@ import org.jline.terminal.Terminal
 import org.jline.terminal.TerminalBuilder
 import org.jline.widget.AutopairWidgets
 import org.jline.widget.AutosuggestionWidgets
-import cn.org.subit.console.command.CommandSet
-import cn.org.subit.console.command.CommandSet.err
-import cn.org.subit.logger.SSubitOLogger.nativeOut
-import cn.org.subit.utils.FileUtils
-import cn.org.subit.utils.Power
 import sun.misc.Signal
 import java.io.File
 
@@ -91,7 +91,7 @@ object Console
      * 命令历史文件
      */
     private val historyFile: File
-        get() = File(FileUtils.dataFolder, "command_history.txt")
+        get() = File(dataDir, "command_history.txt")
 
     /**
      * 在终端上打印一行, 会自动换行并下移命令提升符和已经输入的命令
