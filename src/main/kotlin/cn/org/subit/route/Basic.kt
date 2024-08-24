@@ -148,6 +148,38 @@ fun Route.basic() = route("/auth", {
             )
         }
     }) { changePassword() }
+
+    route("/email", {
+        request {
+            authenticated(true)
+        }
+    })
+    {
+        post("", {
+            description = "添加邮箱"
+            request {
+                body<AddEmailInfo>
+                {
+                    required = true
+                    description = "添加邮箱, code为验证码"
+                }
+            }
+        }) { addEmail() }
+        delete("", {
+            description = "删除邮箱"
+            request {
+                queryParameter<String>("email")
+                {
+                    required = true
+                    description = "邮箱"
+                }
+            }
+            response {
+                statuses(HttpStatus.OK)
+                statuses(HttpStatus.AccountNotExist)
+            }
+        }) { deleteEmail() }
+    }
 }
 
 @Serializable
@@ -263,4 +295,25 @@ private suspend fun Context.sendEmailCode()
     val emailCodes = get<EmailCodes>()
     emailCodes.sendEmailCode(emailInfo.email, emailInfo.usage)
     call.respond(HttpStatus.OK)
+}
+
+@Serializable
+private data class AddEmailInfo(val email: String, val code: String)
+
+private suspend fun Context.addEmail()
+{
+    val addEmailInfo = call.receive<AddEmailInfo>()
+    if (!get<EmailCodes>().verifyEmailCode(addEmailInfo.email, addEmailInfo.code, EmailCodes.EmailCodeUsage.ADD_EMAIL))
+        return call.respond(HttpStatus.WrongEmailCode)
+    val user = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
+    get<Emails>().addEmail(user.id, addEmailInfo.email)
+    call.respond(HttpStatus.OK)
+}
+
+private suspend fun Context.deleteEmail()
+{
+    val email = call.request.queryParameters["email"] ?: return call.respond(HttpStatus.BadRequest)
+    val user = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
+    if (get<Emails>().removeEmail(user.id, email)) return call.respond(HttpStatus.OK)
+    return call.respond(HttpStatus.AccountNotExist.copy(message = "邮箱不存在"))
 }

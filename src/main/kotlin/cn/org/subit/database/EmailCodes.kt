@@ -31,6 +31,7 @@ class EmailCodes: SqlDao<EmailCodes.EmailsTable>(EmailsTable)
     {
         LOGIN("登录"),
         REGISTER("注册"),
+        ADD_EMAIL("添加邮箱"),
         RESET_PASSWORD("重置密码"),
     }
 

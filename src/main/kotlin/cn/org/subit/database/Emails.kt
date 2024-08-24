@@ -3,6 +3,9 @@ package cn.org.subit.database
 import cn.org.subit.dataClasses.Slice.Companion.singleOrNull
 import cn.org.subit.dataClasses.UserId
 import org.jetbrains.exposed.dao.id.IdTable
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 
 class Emails: SqlDao<Emails.EmailTable>(EmailTable)
@@ -31,5 +34,10 @@ class Emails: SqlDao<Emails.EmailTable>(EmailTable)
             it[user] = userId
             it[this.email] = email.lowercase()
         }
+    }
+
+    suspend fun removeEmail(userId: UserId, email: String): Boolean = query()
+    {
+        deleteWhere { (user eq userId) and (table.email eq email.lowercase()) } > 0
     }
 }
