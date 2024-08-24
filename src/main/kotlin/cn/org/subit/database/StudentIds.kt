@@ -3,8 +3,6 @@ package cn.org.subit.database
 import cn.org.subit.dataClasses.Slice.Companion.singleOrNull
 import cn.org.subit.dataClasses.UserId
 import cn.org.subit.route.seiue.Seiue
-import cn.org.subit.utils.Locks
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -13,8 +11,6 @@ import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.json.jsonb
 import org.jetbrains.exposed.sql.selectAll
-import org.koin.core.component.inject
-import java.util.WeakHashMap
 
 class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
 {
