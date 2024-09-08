@@ -3,7 +3,6 @@ package cn.org.subit.utils
 import cn.org.subit.dataClasses.UserId
 import cn.org.subit.dataDir
 import cn.org.subit.logger.SSubitOLogger
-import cn.org.subit.workDir
 import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
@@ -19,7 +18,7 @@ object FileUtils
     private val logger = SSubitOLogger.getLogger()
     private val avatarFolder = File(dataDir, "/avatars")
     private val defaultAvatarFolder = File(avatarFolder, "default")
-    private const val AVATAR_SIZE = 1024
+    private const val AVATAR_SIZE = 512
 
     init
     {
