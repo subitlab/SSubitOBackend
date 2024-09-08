@@ -27,7 +27,7 @@ class Locks<K>
                 while (true)
                 {
                     val ref = runCatching { queue.remove() }.getOrNull() ?: continue
-                    ref as LockReferee<*>
+                    ref as LockReference<*>
                     ref.locks.mutex.withLock()
                     {
                         ref.locks.data.remove(ref.id)
@@ -38,7 +38,7 @@ class Locks<K>
     }
 
     class Lock<K>(val locks: Locks<K>, val id: K): Mutex by Mutex()
-    class LockReferee<K>(lock: Lock<K>): PhantomReference<Lock<K>>(lock, queue)
+    class LockReference<K>(lock: Lock<K>): PhantomReference<Lock<K>>(lock, queue)
     {
         val id = lock.id
         val locks = lock.locks
@@ -48,7 +48,7 @@ class Locks<K>
     {
         data[key]?.get()?.let { return it }
         val newLock = Lock(this, key)
-        data[key] = LockReferee(newLock)
+        data[key] = LockReference(newLock)
         return newLock
     }
 
