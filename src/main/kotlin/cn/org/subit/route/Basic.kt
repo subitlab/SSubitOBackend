@@ -292,6 +292,10 @@ private suspend fun Context.sendEmailCode()
     val emailInfo = call.receive<EmailInfo>()
     if (!checkEmail(emailInfo.email))
         return call.respond(HttpStatus.EmailFormatError)
+    if (emailInfo.usage == EmailCodes.EmailCodeUsage.LOGIN)
+    {
+        get<Emails>().getEmailUsers(emailInfo.email) ?: return call.respond(HttpStatus.AccountNotExist)
+    }
     val emailCodes = get<EmailCodes>()
     emailCodes.sendEmailCode(emailInfo.email, emailInfo.usage)
     call.respond(HttpStatus.OK)
