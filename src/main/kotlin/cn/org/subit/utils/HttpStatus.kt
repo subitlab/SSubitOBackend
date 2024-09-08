@@ -34,7 +34,7 @@ data class HttpStatus(val code: HttpStatusCode, val message: String)
         // 不在白名单中 401
         val NotInWhitelist = HttpStatus(HttpStatusCode.Unauthorized, "不在白名单中, 请确认邮箱或联系管理员")
         // 账户不存在 404
-        val AccountNotExist = HttpStatus(HttpStatusCode.NotFound, "账户不存在")
+        val AccountNotExist = HttpStatus(HttpStatusCode.NotFound, "账户不存在, 请先注册")
         // 越权操作 403
         val Forbidden = HttpStatus(HttpStatusCode.Forbidden, "权限不足")
         // 邮箱验证码错误 401
