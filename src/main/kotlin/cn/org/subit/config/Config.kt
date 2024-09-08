@@ -12,6 +12,7 @@ import java.lang.ref.WeakReference
 import java.util.*
 import kotlin.reflect.KProperty
 import kotlin.reflect.KType
+import kotlin.reflect.jvm.isAccessible
 import kotlin.reflect.typeOf
 
 /**
@@ -65,12 +66,10 @@ class ConfigLoader<T: Any> private constructor(
         private val logger by lazy { SSubitOLogger.getLogger() }
         fun init() // 初始化所有配置
         {
-            (::apiDocsConfig).getDelegate() as ConfigLoader<*>
-            (::emailConfig).getDelegate() as ConfigLoader<*>
-            (::loggerConfig).getDelegate() as ConfigLoader<*>
-            (::systemConfig).getDelegate() as ConfigLoader<*>
-
-            reloadAll()
+            listOf(::apiDocsConfig, ::emailConfig, ::loggerConfig, ::systemConfig).forEach {
+                it.isAccessible = true
+                (it.getDelegate() as ConfigLoader<*>).reload()
+            }
         }
 
         /**
@@ -82,7 +81,7 @@ class ConfigLoader<T: Any> private constructor(
 
         fun configs() = configMap.keys
         fun reload(name: String) = getConfigLoader(name)?.reload()
-        fun reloadAll() = configMap.keys.forEach(Companion::reload)
+        fun reloadAll() = configMap.values.forEach(ConfigLoader<*>::reload)
         fun getConfigLoader(name: String) = configMap[name]
 
         private fun addLoader(loader: ConfigLoader<*>)
