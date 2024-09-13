@@ -45,6 +45,7 @@ fun Route.seiue() = route("/seiue", {
         request {
             authenticated(true)
             queryParameter<String>("access_token")
+            queryParameter<Long>("active_reflection_id")
         }
         response {
             statuses(HttpStatus.OK, HttpStatus.EmailExist.copy(message = "学号已存在"), HttpStatus.BadRequest)
@@ -106,10 +107,13 @@ data class Seiue(
     val deleted_at: String? = null,
 )
 
+private val addBindLocks = Locks<String>()
+
 private suspend fun Context.postBind()
 {
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val token = call.request.queryParameters["access_token"]
+    val activeReflectionId = call.request.queryParameters["active_reflection_id"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
 
     val result = withContext(Dispatchers.IO)
     {
@@ -117,7 +121,7 @@ private suspend fun Context.postBind()
         val url = URL("https://open.seiue.com/api/v3/oauth/me")
         val connection = url.openConnection() as HttpURLConnection
         connection.setRequestProperty("Authorization", "Bearer $token")
-        connection.setRequestProperty("X-School-Id", systemConfig.schoolId.toString())
+        connection.setRequestProperty("X-Reflection-Id", activeReflectionId.toString())
         connection.requestMethod = "GET"
         runCatching { connection.inputStream.bufferedReader().readText() }.getOrNull()
     } ?: return call.respond(HttpStatus.BadRequest.copy(message = "seiue token 无效"))
@@ -128,12 +132,16 @@ private suspend fun Context.postBind()
 
     if (seiue.school_id != systemConfig.schoolId)
         return call.respond(HttpStatus.BadRequest.copy(message = "学校不匹配"))
-    if (studentIds.getStudentIdUsers(seiue.usin) != null)
-        return call.respond(HttpStatus.EmailExist.copy(message = "学号已存在"))
-    else
+
+    addBindLocks.withLock<Nothing>(seiue.usin)
     {
-        studentIds.addStudentId(loginUser.id, seiue.usin, seiue.name, seiue)
-        return call.respond(HttpStatus.OK, "学号添加成功")
+        if (studentIds.getStudentIdUsers(seiue.usin) != null)
+            return call.respond(HttpStatus.EmailExist.copy(message = "学号已存在"))
+        else
+        {
+            studentIds.addStudentId(loginUser.id, seiue.usin, seiue.name, !seiue.status.equals("normal", true), result)
+            return call.respond(HttpStatus.OK, "学号添加成功")
+        }
     }
 }
 

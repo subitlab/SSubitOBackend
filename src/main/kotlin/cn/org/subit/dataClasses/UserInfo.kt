@@ -27,17 +27,19 @@ data class UserInfo(
     val phone: String,
 ): Principal
 {
+    suspend fun toUserFull() = toUserFull(email = emails.getUserEmails(id), seiue = studentIds.getSeiue(id),)
     fun toBasicUserInfo() = BasicUserInfo(id, username, registrationTime)
-    fun toUserFull(email: List<String>, studentId: Map<String, String>) = UserFull(id, username, registrationTime, permission, phone, email, studentId)
-    suspend fun toUserFull() = UserFull(
-        id = id,
-        username = username,
-        registrationTime = registrationTime,
-        permission = permission,
-        phone = phone,
-        email = emails.getUserEmails(id),
-        studentId = studentIds.getUserStudentIdAndName(id)
-    )
+    fun toUserFull(email: List<String>, seiue: List<UserFull.Seiue>) =
+        UserFull(
+            id,
+            username,
+            registrationTime,
+            permission,
+            phone,
+            email,
+            seiue,
+            seiue.associate { it.studentId to it.realName }
+        )
 
     companion object: KoinComponent
     {
@@ -58,8 +60,18 @@ data class UserFull(
     val permission: Permission,
     val phone: String,
     val email: List<String>,
+    val seiue: List<Seiue>,
+    @Deprecated("Use seiue instead", ReplaceWith("seiue"))
     val studentId: Map<String, String>,
 )
+{
+    @Serializable
+    data class Seiue(
+        val studentId: String,
+        val realName: String,
+        val archived: Boolean,
+    )
+}
 
 @Serializable
 data class BasicUserInfo(

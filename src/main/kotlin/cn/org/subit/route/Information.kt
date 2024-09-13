@@ -3,10 +3,7 @@
 package cn.org.subit.route.info
 
 import cn.org.subit.JWTAuth.getLoginUser
-import cn.org.subit.dataClasses.BasicUserInfo
-import cn.org.subit.dataClasses.Permission
-import cn.org.subit.dataClasses.UserFull
-import cn.org.subit.dataClasses.UserId
+import cn.org.subit.dataClasses.*
 import cn.org.subit.dataClasses.UserId.Companion.toUserIdOrNull
 import cn.org.subit.database.Users
 import cn.org.subit.logger.SSubitOLogger
@@ -57,7 +54,8 @@ fun Route.info() = route("", {
                     email = listOf("email1@example.com", "email2@example.com", "email3@example.com"),
                     phone = "12345678901",
                     username = "username",
-                    studentId = mapOf("studentId1" to "realName1", "studentId2" to "realName2"),
+                    seiue = listOf(UserFull.Seiue("studentId", "realName", false)),
+                    studentId = mapOf("studentId" to "realName"),
                     permission = Permission.NORMAL,
                     registrationTime = System.currentTimeMillis()
                 )
