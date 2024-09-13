@@ -169,7 +169,7 @@ private suspend fun Context.getUserInfo()
     {
         val user = get<Users>().getUser(id) ?: return call.respond(HttpStatus.NotFound)
         if (loginUser != null && loginUser.permission >= Permission.ADMIN) call.respond(HttpStatus.OK, user.toUserFull())
-        else call.respond(HttpStatus.OK, user.toBasicUserInfo())
+        else call.respond(HttpStatus.OK, user.toUserFull().toBasicUserInfo())
     }
 }
 

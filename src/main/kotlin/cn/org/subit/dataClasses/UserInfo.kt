@@ -28,7 +28,6 @@ data class UserInfo(
 ): Principal
 {
     suspend fun toUserFull() = toUserFull(email = emails.getUserEmails(id), seiue = studentIds.getSeiue(id),)
-    fun toBasicUserInfo() = BasicUserInfo(id, username, registrationTime)
     fun toUserFull(email: List<String>, seiue: List<UserFull.Seiue>) =
         UserFull(
             id,
@@ -71,6 +70,8 @@ data class UserFull(
         val realName: String,
         val archived: Boolean,
     )
+
+    fun toBasicUserInfo() = BasicUserInfo(id, username, registrationTime, email)
 }
 
 @Serializable
@@ -78,4 +79,5 @@ data class BasicUserInfo(
     val id: UserId,
     val username: String,
     val registrationTime: Long,
+    val email: List<String>,
 )
