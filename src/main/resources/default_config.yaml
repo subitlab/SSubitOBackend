@@ -2,6 +2,9 @@ ktor:
   deployment:
     port: 8080
     rootPath: '/api'
+serverUrl:
+  - 'https://sso.subit.org.cn'
+  - 'https://ssubito.subit.org.cn'
 database:
   # 数据库实现, 可选值: sql, memory
   impl: sql
