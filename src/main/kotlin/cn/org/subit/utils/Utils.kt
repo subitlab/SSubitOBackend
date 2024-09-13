@@ -1,7 +1,9 @@
 package cn.org.subit.utils
 
+import cn.org.subit.Loader
 import cn.org.subit.config.emailConfig
 import cn.org.subit.database.EmailCodes
+import cn.org.subit.logger.SSubitOLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -13,6 +15,8 @@ import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeBodyPart
 import javax.mail.internet.MimeMessage
 import javax.mail.internet.MimeMultipart
+
+private val logger = SSubitOLogger.getLogger()
 
 /**
  * 检查邮箱格式是否正确
@@ -62,17 +66,26 @@ fun sendEmail(email: String, code: String, usage: EmailCodes.EmailCodeUsage) = s
     message.setFrom(InternetAddress(emailConfig.sender))
     message.setRecipient(Message.RecipientType.TO, InternetAddress(email))
     message.subject = emailConfig.verifyEmailTitle
-    val multipart = MimeMultipart()
-    val bodyPart = MimeBodyPart()
-    bodyPart.setText(
-        """
-            您的验证码为: $code
-            有效期为: ${emailConfig.codeValidTime}秒
-            此验证码仅用于论坛${usage.description}，请勿泄露给他人。若非本人操作，请忽略此邮件。
-        """.trimIndent()
-    )
-    multipart.addBodyPart(bodyPart)
-    message.setContent(multipart)
+
+    val body =
+        Loader
+            .getResource("email.html")
+            ?.readAllBytes()
+            ?.decodeToString()
+            ?.replace("{code}", code)
+            ?.replace("{usage}", usage.description)
+        ?: run {
+            logger.severe("Failed to load email.html")
+            logger.severe("Send email failed: email: $email, code: $code, usage: $usage")
+            return@async
+        }
+
+    val mimeMultipart = MimeMultipart()
+    val mimeBodyPart = MimeBodyPart()
+    mimeBodyPart.setContent(body, "text/html; charset=utf-8")
+    mimeMultipart.addBodyPart(mimeBodyPart)
+    message.setContent(mimeMultipart)
+
     val transport = session.getTransport("smtp")
     transport.connect(emailConfig.host, emailConfig.port, emailConfig.sender, emailConfig.password)
     transport.sendMessage(message, arrayOf<Address>(InternetAddress(email)))
