@@ -1,8 +1,12 @@
 package cn.org.subit.route
 
+import cn.org.subit.JWTAuth.getLoginUser
+import cn.org.subit.dataClasses.Permission
 import cn.org.subit.route.basic.basic
 import cn.org.subit.route.info.info
 import cn.org.subit.route.seiue.seiue
+import cn.org.subit.utils.HttpStatus
+import cn.org.subit.utils.respond
 import io.github.smiley4.ktorswaggerui.dsl.routing.get
 import io.github.smiley4.ktorswaggerui.routing.openApiSpec
 import io.github.smiley4.ktorswaggerui.routing.swaggerUI
@@ -38,4 +42,6 @@ fun Application.router() = routing()
         info()
         seiue()
     }
+
+    logo()
 }
