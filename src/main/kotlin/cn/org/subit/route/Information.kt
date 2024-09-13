@@ -8,7 +8,6 @@ import cn.org.subit.dataClasses.UserId.Companion.toUserIdOrNull
 import cn.org.subit.database.Users
 import cn.org.subit.logger.SSubitOLogger
 import cn.org.subit.route.Context
-import cn.org.subit.route.authenticated
 import cn.org.subit.route.get
 import cn.org.subit.utils.*
 import io.github.smiley4.ktorswaggerui.dsl.routing.delete
@@ -38,7 +37,6 @@ fun Route.info() = route("", {
                 获取当前登陆用户的信息或当前登陆的用户的user权限不低于ADMIN时可以获取完整用户信息, 否则只能获取基础信息
                 """.trimIndent()
         request {
-            authenticated(false)
             pathParameter<UserId>("id")
             {
                 required = true
@@ -71,7 +69,6 @@ fun Route.info() = route("", {
     post("/username", {
         description = "修改用户名"
         request {
-            authenticated(true)
             body<ChangeUsername>()
             {
                 required = true
@@ -86,7 +83,6 @@ fun Route.info() = route("", {
     post("/avatar/{id}", {
         description = "修改头像, 修改他人头像要求user权限在ADMIN以上"
         request {
-            authenticated(true)
             pathParameter<UserId>("id")
             {
                 required = true
@@ -114,7 +110,6 @@ fun Route.info() = route("", {
     get("/avatar/{id}", {
         description = "获取头像"
         request {
-            authenticated(false)
             pathParameter<UserId>("id")
             {
                 required = true
@@ -137,7 +132,6 @@ fun Route.info() = route("", {
     delete("/avatar/{id}", {
         description = "删除头像, 即恢复默认头像, 删除他人头像要求user权限在ADMIN以上"
         request {
-            authenticated(true)
             pathParameter<UserId>("id")
             {
                 required = true

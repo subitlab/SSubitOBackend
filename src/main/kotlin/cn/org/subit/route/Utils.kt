@@ -20,16 +20,6 @@ inline fun <reified T: Any> Context.get(
 ) = application.get<T>(qualifier, parameters)
 
 /**
- * 辅助方法, 标记此接口需要验证token(需要登陆)
- * @param required 是否必须登陆
- */
-fun OpenApiRequest.authenticated(required: Boolean) = headerParameter<String>("Authorization")
-{
-    this.description = "Bearer token"
-    this.required = required
-}
-
-/**
  * 辅助方法, 标记此方法返回需要传入begin和count, 用于分页
  */
 fun OpenApiRequest.paged()

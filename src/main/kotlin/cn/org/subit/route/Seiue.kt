@@ -7,7 +7,6 @@ import cn.org.subit.config.systemConfig
 import cn.org.subit.dataClasses.UserId
 import cn.org.subit.database.StudentIds
 import cn.org.subit.route.Context
-import cn.org.subit.route.authenticated
 import cn.org.subit.route.get
 import cn.org.subit.utils.HttpStatus
 import cn.org.subit.utils.Locks
@@ -43,7 +42,6 @@ fun Route.seiue() = route("/seiue", {
     post("/bind", {
         description = "完成绑定"
         request {
-            authenticated(true)
             queryParameter<String>("access_token")
             queryParameter<Long>("active_reflection_id")
         }
@@ -55,7 +53,6 @@ fun Route.seiue() = route("/seiue", {
     delete("/bind", {
         description = "解绑学号"
         request {
-            authenticated(true)
             queryParameter<String>("studentId")
             {
                 required = true

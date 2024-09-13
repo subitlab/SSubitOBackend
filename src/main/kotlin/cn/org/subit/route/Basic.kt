@@ -12,7 +12,6 @@ import cn.org.subit.database.Users
 import cn.org.subit.database.sendEmailCode
 import cn.org.subit.plugin.RateLimit
 import cn.org.subit.route.Context
-import cn.org.subit.route.authenticated
 import cn.org.subit.route.example
 import cn.org.subit.route.get
 import cn.org.subit.utils.*
@@ -132,7 +131,6 @@ fun Route.basic() = route("/auth", {
     post("/changePassword", {
         description = "修改密码"
         request {
-            authenticated(true)
             body<ChangePasswordInfo>
             {
                 required = true
@@ -152,7 +150,6 @@ fun Route.basic() = route("/auth", {
 
     route("/email", {
         request {
-            authenticated(true)
         }
     })
     {
