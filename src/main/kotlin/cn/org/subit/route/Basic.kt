@@ -4,6 +4,7 @@ package cn.org.subit.route.basic
 
 import cn.org.subit.JWTAuth
 import cn.org.subit.JWTAuth.getLoginUser
+import cn.org.subit.dataClasses.Permission
 import cn.org.subit.dataClasses.UserId
 import cn.org.subit.database.EmailCodes
 import cn.org.subit.database.Emails
@@ -230,6 +231,7 @@ private suspend fun Context.login()
     else return call.respond(HttpStatus.BadRequest)
     // 若登陆失败，返回错误信息
     if (checked == null) return call.respond(HttpStatus.PasswordError)
+    if (users.getUser(checked)?.permission == Permission.BANNED) return call.respond(HttpStatus.Prohibit)
     val token = JWTAuth.makeToken(checked)
     return call.respond(HttpStatus.OK, token)
 }
@@ -243,6 +245,7 @@ private suspend fun Context.loginByCode()
     if (!get<EmailCodes>().verifyEmailCode(loginInfo.email, loginInfo.code, EmailCodes.EmailCodeUsage.LOGIN))
         return call.respond(HttpStatus.WrongEmailCode)
     val user = get<Emails>().getEmailUsers(loginInfo.email) ?: return call.respond(HttpStatus.AccountNotExist)
+    if (get<Users>().getUser(user)?.permission == Permission.BANNED) return call.respond(HttpStatus.Prohibit)
     val token = JWTAuth.makeToken(user)
     return call.respond(HttpStatus.OK, token)
 }

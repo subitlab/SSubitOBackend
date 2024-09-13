@@ -38,6 +38,12 @@ fun Application.router() = routing()
 
     authenticate("ssubito-auth", optional = true)
     {
+        intercept(ApplicationCallPipeline.Call)
+        {
+            val permission = getLoginUser()?.permission ?: return@intercept
+            if (permission < Permission.NORMAL) call.respond(HttpStatus.Prohibit)
+        }
+
         basic()
         info()
         seiue()
