@@ -1,7 +1,7 @@
 package cn.org.subit.database
 
-import cn.org.subit.dataClasses.Slice.Companion.singleOrNull
 import cn.org.subit.dataClasses.UserId
+import cn.org.subit.database.utils.singleOrNull
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and

@@ -2,7 +2,7 @@ package cn.org.subit.database
 
 import cn.org.subit.JWTAuth
 import cn.org.subit.dataClasses.Permission
-import cn.org.subit.dataClasses.Slice.Companion.singleOrNull
+import cn.org.subit.database.utils.singleOrNull
 import cn.org.subit.dataClasses.UserId
 import cn.org.subit.dataClasses.UserInfo
 import kotlinx.datetime.Instant
