@@ -1,5 +1,6 @@
 package cn.org.subit.console.command
 
+import cn.org.subit.config.loggerConfig
 import cn.org.subit.console.*
 import cn.org.subit.console.AnsiStyle.Companion.ansi
 
@@ -15,11 +16,11 @@ object Color: TreeCommand(Test, Mode, Effect)
             val sb = StringBuilder().append("")
                 .append("If certain colors or effects are not supported, ")
                 .append("you can use ")
-                .append(AnsiEffect.BOLD.ansi() + SimpleAnsiColor.CYAN.bright().ansi())
+                .append(AnsiEffect.BOLD.ansi()+SimpleAnsiColor.CYAN.bright().ansi())
                 .append("color mode [rgb | simple | none] ")
                 .append(AnsiStyle.RESET)
                 .append("and ")
-                .append(AnsiEffect.BOLD.ansi() + SimpleAnsiColor.CYAN.bright().ansi())
+                .append(AnsiEffect.BOLD.ansi()+SimpleAnsiColor.CYAN.bright().ansi())
                 .append("color effect [on | off]")
                 .append(AnsiStyle.RESET)
                 .append("to set the corresponding color and effect modes, respectively")
@@ -29,13 +30,16 @@ object Color: TreeCommand(Test, Mode, Effect)
             for (color in SimpleAnsiColor.entries) sb.append("${color.value}${color.key}${AnsiStyle.RESET} ")
             sb.append("\n")
             sb.append("R:\n")
-            for (i in 0..Byte.MAX_VALUE) sb.append("${RGBAnsiColor.fromRGB(i, 0, 0)}$i${AnsiStyle.RESET} ")
+            for (i in 0.toUByte()..UByte.MAX_VALUE)
+                sb.append("${RGBAnsiColor.fromRGB(i.toInt(), 0, 0)}$i${AnsiStyle.RESET} ")
             sb.append("\n")
             sb.append("G:\n")
-            for (i in 0..Byte.MAX_VALUE) sb.append("${RGBAnsiColor.fromRGB(0, i, 0)}$i${AnsiStyle.RESET} ")
+            for (i in 0.toUByte()..UByte.MAX_VALUE)
+                sb.append("${RGBAnsiColor.fromRGB(0, i.toInt(), 0)}$i${AnsiStyle.RESET} ")
             sb.append("\n")
             sb.append("B:\n")
-            for (i in 0..Byte.MAX_VALUE) sb.append("${RGBAnsiColor.fromRGB(0, 0, i)}$i${AnsiStyle.RESET} ")
+            for (i in 0.toUByte()..UByte.MAX_VALUE)
+                sb.append("${RGBAnsiColor.fromRGB(0, 0, i.toInt())}$i${AnsiStyle.RESET} ")
             sb.toString().split("\n").forEach { CommandSet.out.println(it) }
             return true
         }
@@ -51,6 +55,7 @@ object Color: TreeCommand(Test, Mode, Effect)
             override suspend fun execute(args: List<String>): Boolean
             {
                 Console.ansiColorMode = ColorDisplayMode.RGB
+                loggerConfig = loggerConfig.copy(color = ColorDisplayMode.RGB)
                 CommandSet.out.println("Color mode: RGB")
                 return true
             }
@@ -62,6 +67,7 @@ object Color: TreeCommand(Test, Mode, Effect)
             override suspend fun execute(args: List<String>): Boolean
             {
                 Console.ansiColorMode = ColorDisplayMode.SIMPLE
+                loggerConfig = loggerConfig.copy(color = ColorDisplayMode.SIMPLE)
                 CommandSet.out.println("Color mode: Simple")
                 return true
             }
@@ -73,6 +79,7 @@ object Color: TreeCommand(Test, Mode, Effect)
             override suspend fun execute(args: List<String>): Boolean
             {
                 Console.ansiColorMode = ColorDisplayMode.NONE
+                loggerConfig = loggerConfig.copy(color = ColorDisplayMode.NONE)
                 CommandSet.out.println("Color mode: None")
                 return true
             }
@@ -89,6 +96,7 @@ object Color: TreeCommand(Test, Mode, Effect)
             override suspend fun execute(args: List<String>): Boolean
             {
                 Console.ansiEffectMode = EffectDisplayMode.ON
+                loggerConfig = loggerConfig.copy(effect = true)
                 CommandSet.out.println("Color effect: On")
                 return true
             }
@@ -100,6 +108,7 @@ object Color: TreeCommand(Test, Mode, Effect)
             override suspend fun execute(args: List<String>): Boolean
             {
                 Console.ansiEffectMode = EffectDisplayMode.OFF
+                loggerConfig = loggerConfig.copy(effect = false)
                 CommandSet.out.println("Color effect: Off")
                 return true
             }

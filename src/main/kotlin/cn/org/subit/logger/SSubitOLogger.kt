@@ -12,6 +12,8 @@ import cn.org.subit.console.SimpleAnsiColor.Companion.PURPLE
 import cn.org.subit.logger.SSubitOLogger.nativeOut
 import cn.org.subit.logger.SSubitOLogger.safe
 import cn.org.subit.workDir
+import kotlinx.datetime.Clock
+import kotlinx.datetime.toKotlinInstant
 import java.io.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -307,6 +309,7 @@ object ToFileHandler: Handler()
         }
         logFile.createNewFile() // 创建新的log文件
         cnt = 0 // 重置行数
+        clearOld() // 清理过期log
     }
 
     /**
@@ -327,6 +330,18 @@ object ToFileHandler: Handler()
         zipOut.close()
         fis.close()
         fos.close()
+    }
+
+    private fun clearOld()
+    {
+        val files = logDir.listFiles() ?: return
+        files.asSequence()
+            .filter { it.name.endsWith(".zip") }
+            .map { it to fileDateFormat.parse(it.name.substringBeforeLast(".zip")) }
+            .map { it.first to it.second.toInstant().toKotlinInstant() }
+            .map { it.first to it.second - Clock.System.now() }
+            .filter { it.second > loggerConfig.logFileSaveTime }
+            .forEach { it.first.delete() }
     }
 
     private fun check()
