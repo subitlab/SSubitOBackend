@@ -4,6 +4,7 @@ import cn.org.subit.console.ColorDisplayMode
 import cn.org.subit.console.Console
 import cn.org.subit.console.EffectDisplayMode
 import cn.org.subit.logger.SSubitOLogger
+import cn.org.subit.logger.ToFileHandler
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -51,5 +52,6 @@ var loggerConfig: LoggerConfig by config(
             if (new.effect) EffectDisplayMode.ON
             else EffectDisplayMode.OFF
         Console.ansiColorMode = new.color
+        ToFileHandler.clearOld(new.logFileSaveTime)
     }
 )

@@ -27,6 +27,7 @@ import java.util.zip.ZipOutputStream
 import kotlin.jvm.optionals.getOrDefault
 import kotlin.reflect.KClass
 import kotlin.reflect.jvm.jvmName
+import kotlin.time.Duration
 
 /**
  * logger系统
@@ -309,7 +310,6 @@ object ToFileHandler: Handler()
         }
         logFile.createNewFile() // 创建新的log文件
         cnt = 0 // 重置行数
-        clearOld() // 清理过期log
     }
 
     /**
@@ -332,21 +332,28 @@ object ToFileHandler: Handler()
         fos.close()
     }
 
-    private fun clearOld()
+    fun clearOld(duration: Duration = loggerConfig.logFileSaveTime)
     {
         val files = logDir.listFiles() ?: return
         files.asSequence()
             .filter { it.name.endsWith(".zip") }
-            .map { it to fileDateFormat.parse(it.name.substringBeforeLast(".zip")) }
+            .map { it to it.name.substringBeforeLast(".zip") }
+            .map { runCatching { it.first to fileDateFormat.parse(it.second) }.getOrNull() }
+            .filterNotNull()
             .map { it.first to it.second.toInstant().toKotlinInstant() }
-            .map { it.first to it.second - Clock.System.now() }
-            .filter { it.second > loggerConfig.logFileSaveTime }
-            .forEach { it.first.delete() }
+            .map { it.first to (Clock.System.now() - it.second) }
+            .filter { it.second > duration }
+            .map { it.first }
+            .forEach { it.delete() }
     }
 
     private fun check()
     {
-        if ((cnt ushr 10) > 0) new()
+        if ((cnt ushr 10) > 0)
+        {
+            new()
+            clearOld()
+        }
     }
 
     private fun append(lines: List<String>) = synchronized(this)
