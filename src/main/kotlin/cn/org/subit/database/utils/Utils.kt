@@ -4,7 +4,7 @@ import cn.org.subit.dataClasses.Slice
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.rowNumber
 
-fun Query.asSlice(begin: Long, limit: Int): Slice<ResultRow> = runCatching()
+fun Query.asSlice(begin: Long, limit: Int): Slice<ResultRow>
 {
     val totalSize = Count(TheAny).over().alias("_Slice_TotalSize_")
     val rowNumber = rowNumber().over().orderBy(*this.orderByExpressions.toTypedArray()).alias("_Slice_RowNumber_")
@@ -22,7 +22,7 @@ fun Query.asSlice(begin: Long, limit: Int): Slice<ResultRow> = runCatching()
         .select(query.set.fields + isData, listOf(TheAny, isData))
         .andWhere { rowNumber.aliasOnlyExpression() greaterEq longParam(begin + 1) }
         .andWhere { rowNumber.aliasOnlyExpression() lessEq longParam(begin + limit) }
-    val q2 = q.aliasOnly().select(this.set.fields.map { Null } + Null + totalSize + booleanParam(false))
+    val q2 = q.aliasOnly().select(this.set.fields.map { Null } + Null + CustomFunction("COUNT", LongColumnType(), theAny<Long>()) + booleanParam(false))
 
     val resQ = q1.union(q2)
     val list = WithQuery(q, resQ)
@@ -32,11 +32,13 @@ fun Query.asSlice(begin: Long, limit: Int): Slice<ResultRow> = runCatching()
     val resCount = list.first()[totalSize]
     val resList = list.filter { it[isData] }.sortedBy { it[rowNumber] }
     return Slice(resCount, begin, resList)
-}.getOrElse { it.printStackTrace(); Slice.empty() }
+}
 
 fun Query.single() = asSlice(0, 1).list[0]
 fun Query.singleOrNull() = asSlice(0, 1).list.firstOrNull()
 
+@Suppress("UNCHECKED_CAST")
+private fun <T> theAny(): Expression<T> = TheAny as Expression<T>
 private object TheAny: Expression<Any>()
 {
     override fun toQueryBuilder(queryBuilder: QueryBuilder)
@@ -101,3 +103,22 @@ private class WithQuery(private val with: QueryAlias, val query: AbstractQuery<*
 
 private fun QueryAlias.aliasOnly() = object: Table(this.alias)
 {}
+
+class CustomExpressionWithColumnType<T>(
+    val expression: Expression<T>,
+    override val columnType: IColumnType<T & Any>,
+): ExpressionWithColumnType<T>()
+{
+    override fun equals(other: Any?): Boolean
+    {
+        if (other is CustomExpressionWithColumnType<*>) return this.expression == other.expression
+        return this.expression == other
+    }
+
+    override fun hashCode(): Int = expression.hashCode()
+    override fun toQueryBuilder(queryBuilder: QueryBuilder) = expression.toQueryBuilder(queryBuilder)
+    override fun toString(): String = expression.toString()
+}
+
+fun <T>Expression<T>.withColumnType(columnType: ColumnType<T & Any>): ExpressionWithColumnType<T> =
+    CustomExpressionWithColumnType(this, columnType)
