@@ -1,6 +1,6 @@
 package cn.org.subit.utils
 
-import cn.org.subit.route.example
+import cn.org.subit.route.utils.example
 import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiResponses
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -64,6 +64,8 @@ data class HttpStatus(val code: HttpStatusCode, val message: String)
         // 请求过于频繁
         val TooManyRequests = HttpStatus(HttpStatusCode.TooManyRequests, "请求过于频繁")
     }
+
+    fun subStatus(message: String) = HttpStatus(code, "${this.message}: $message")
 }
 
 @Serializable

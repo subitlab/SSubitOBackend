@@ -1,10 +1,11 @@
 package cn.org.subit.route
 
 import cn.org.subit.Loader
+import cn.org.subit.route.utils.finishCallWithBytes
+import cn.org.subit.utils.HttpStatus
 import io.github.smiley4.ktorswaggerui.dsl.routing.get
 import io.github.smiley4.ktorswaggerui.dsl.routing.route
-import io.ktor.server.application.*
-import io.ktor.server.response.*
+import io.ktor.http.*
 import io.ktor.server.routing.*
 
 fun Route.logo() = route("/logo", {
@@ -13,16 +14,28 @@ fun Route.logo() = route("/logo", {
 {
     get("/dark")
     {
-        call.respondBytes(Loader.getResource("logo/SubIT-dark.png")!!.readAllBytes())
+        finishCallWithBytes(
+            HttpStatus.OK,
+            ContentType.Image.PNG,
+            Loader.getResource("logo/SubIT-dark.png")!!
+        )
     }
 
     get("/light")
     {
-        call.respondBytes(Loader.getResource("logo/SubIT-light.png")!!.readAllBytes())
+        finishCallWithBytes(
+            HttpStatus.OK,
+            ContentType.Image.PNG,
+            Loader.getResource("logo/SubIT-light.png")!!
+        )
     }
 
     get("/normal")
     {
-        call.respondBytes(Loader.getResource("logo/SubIT-normal.png")!!.readAllBytes())
+        finishCallWithBytes(
+            HttpStatus.OK,
+            ContentType.Image.PNG,
+            Loader.getResource("logo/SubIT-normal.png")!!
+        )
     }
 }

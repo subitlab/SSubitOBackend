@@ -1,4 +1,6 @@
-package cn.org.subit.plugin
+@file:Suppress("PackageDirectoryMismatch")
+
+package cn.org.subit.plugin.cors
 
 import cn.org.subit.debug
 import io.ktor.http.*
@@ -10,11 +12,20 @@ import io.ktor.server.plugins.cors.routing.*
  */
 fun Application.installCORS() = install(CORS)
 {
+    val serverHost = this@installCORS.environment.config.propertyOrNull("serverHost")
+
+    val servers =
+        if (serverHost == null) emptyList()
+        else runCatching { serverHost.getList() }.getOrElse { listOf(serverHost.getString()) }
+
+    servers.forEach { allowHost(it, schemes = listOf("http", "https", "ws", "wss")) }
+
     if (debug)
     {
         anyHost()
         HttpMethod.DefaultMethods.forEach { allowMethod(it) }
         allowCredentials = true
         allowNonSimpleContentTypes = true
+        allowHeaders { true }
     }
 }

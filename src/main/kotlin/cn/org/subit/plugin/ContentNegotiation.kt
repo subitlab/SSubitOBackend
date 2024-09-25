@@ -1,4 +1,6 @@
-package cn.org.subit.plugin
+@file:Suppress("PackageDirectoryMismatch")
+
+package cn.org.subit.plugin.contentnegotiation
 
 import cn.org.subit.debug
 import io.ktor.serialization.kotlinx.json.*
@@ -8,28 +10,41 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 
 /**
- * 安装反序列化/序列化服务(用于处理json)
+ * 用作请求/响应的json序列化/反序列化
  */
 @OptIn(ExperimentalSerializationApi::class)
+val contentNegotiationJson = Json()
+{
+    encodeDefaults = true
+    prettyPrint = debug
+    ignoreUnknownKeys = true
+    isLenient = true
+    explicitNulls = true
+    allowSpecialFloatingPointValues = true
+    decodeEnumsCaseInsensitive = true
+    allowTrailingComma = true
+}
+
+/**
+ * 用作数据处理的json序列化/反序列化
+ */
+val dataJson = Json(contentNegotiationJson)
+{
+    prettyPrint = false
+}
+
+/**
+ * 用作api文档等展示的json序列化/反序列化
+ */
+val showJson = Json(contentNegotiationJson)
+{
+    prettyPrint = true
+}
+
+/**
+ * 安装反序列化/序列化服务(用于处理json)
+ */
 fun Application.installContentNegotiation() = install(ContentNegotiation)
 {
-    json(Json()
-    {
-        // 设置默认值也序列化, 否则不默认值不会被序列化
-        encodeDefaults = true
-        // 若debug模式开启, 则将json序列化为可读性更高的格式
-        prettyPrint = debug
-        // 忽略未知字段
-        ignoreUnknownKeys = true
-        // 宽松模式, 若字段类型不匹配, 则尝试转换
-        isLenient = true
-        // 编码null
-        explicitNulls = true
-        // 允许特殊的浮点数值, 如NaN, Infinity
-        allowSpecialFloatingPointValues = true
-        // 忽略枚举大小写
-        decodeEnumsCaseInsensitive = true
-        // 允许尾随逗号
-        allowTrailingComma = true
-    })
+    json(contentNegotiationJson)
 }

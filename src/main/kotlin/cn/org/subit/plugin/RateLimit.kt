@@ -1,17 +1,18 @@
-package cn.org.subit.plugin
+@file:Suppress("PackageDirectoryMismatch")
+
+package cn.org.subit.plugin.rateLimit
 
 import cn.org.subit.route.basic.EmailInfo
+import cn.org.subit.utils.HttpStatus
+import cn.org.subit.utils.respond
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
-import cn.org.subit.utils.HttpStatus
-import cn.org.subit.utils.respond
 import java.util.*
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
 
 sealed interface RateLimit
 {
@@ -80,10 +81,5 @@ fun Application.installRateLimit() = install(io.ktor.server.plugins.ratelimit.Ra
                 }
             }
         }
-    }
-
-    global {
-        rateLimiter(limit = 150, refillPeriod = 1.seconds)
-        requestKey { call -> call.request.local.remoteHost }
     }
 }

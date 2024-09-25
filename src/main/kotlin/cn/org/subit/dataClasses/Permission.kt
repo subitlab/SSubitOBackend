@@ -8,5 +8,6 @@ enum class Permission
 {
     BANNED,
     NORMAL,
+    READONLY_ADMIN,
     ADMIN,
 }

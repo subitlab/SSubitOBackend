@@ -5,6 +5,7 @@ import cn.org.subit.dataClasses.Permission
 import cn.org.subit.route.basic.basic
 import cn.org.subit.route.info.info
 import cn.org.subit.route.seiue.seiue
+import cn.org.subit.route.terminal.terminal
 import cn.org.subit.utils.HttpStatus
 import cn.org.subit.utils.respond
 import io.github.smiley4.ktorswaggerui.dsl.routing.get
@@ -47,6 +48,7 @@ fun Application.router() = routing()
         basic()
         info()
         seiue()
+        terminal()
     }
 
     logo()

@@ -42,6 +42,7 @@ dependencies {
     implementation("io.ktor:ktor-server-swagger")
     implementation("io.ktor:ktor-server-cors-jvm") // 跨域
     implementation("io.ktor:ktor-server-rate-limit-jvm") // 限流
+    implementation("io.ktor:ktor-server-websockets")
     implementation("io.github.smiley4:ktor-swagger-ui:$swagger_ui_version") // 创建api页面
     implementation("io.github.smiley4:schema-kenerator-core:$schema_kenerator")
     implementation("io.github.smiley4:schema-kenerator-reflection:$schema_kenerator")

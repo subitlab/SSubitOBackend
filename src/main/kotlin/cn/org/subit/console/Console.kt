@@ -1,10 +1,10 @@
 package cn.org.subit.console
 
 import cn.org.subit.console.command.CommandSet
-import cn.org.subit.console.command.CommandSet.err
 import cn.org.subit.dataDir
 import cn.org.subit.logger.SSubitOLogger.nativeOut
 import cn.org.subit.utils.Power
+import kotlinx.coroutines.runBlocking
 import org.jline.reader.LineReader
 import org.jline.reader.LineReaderBuilder
 import org.jline.reader.impl.LineReaderImpl
@@ -42,7 +42,7 @@ object Console
 
     init
     {
-        Signal.handle(Signal("INT")) { onUserInterrupt() }
+        Signal.handle(Signal("INT")) { onUserInterrupt(CommandSet.ConsoleCommandSender) }
         var terminal: Terminal? = null
         var lineReader: LineReader? = null
         try
@@ -70,20 +70,20 @@ object Console
         catch (e: Throwable)
         {
             terminal?.close()
-            err.println("Failed to initialize terminal, will use system console instead.")
+            println("Failed to initialize terminal, will use system console instead.")
         }
         this.terminal = terminal
         this.lineReader = lineReader
     }
 
-    fun onUserInterrupt()
+    fun onUserInterrupt(sender: CommandSet.CommandSender): Nothing = runBlocking()
     {
-        err.println("You might have pressed Ctrl+C or performed another operation to stop the server.")
-        err.println(
+        sender.err("You might have pressed Ctrl+C or performed another operation to stop the server.")
+        sender.err(
             "This method is feasible but not recommended, " +
             "it should only be used when a command-line system error prevents the program from closing."
         )
-        err.println("If you want to stop the server, please use the \"stop\" command.")
+        sender.err("If you want to stop the server, please use the \"stop\" command.")
         Power.shutdown(0, "User interrupt")
     }
 

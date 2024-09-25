@@ -90,12 +90,12 @@ object TestDatabase: Command, KoinComponent
         }
     }
 
-    override suspend fun execute(args: List<String>): Boolean
+    override suspend fun execute(sender: CommandSet.CommandSender, args: List<String>): Boolean
     {
         if (!debug)
         {
-            CommandSet.err.println("此命令仅用于调试, 请在debug模式下使用.")
-            CommandSet.err.println("${RED}开启debug模式请在启动参数中加入 -debug=true")
+            sender.err("此命令仅用于调试, 请在debug模式下使用.")
+            sender.err("${RED}开启debug模式请在启动参数中加入 -debug=true")
             return true
         }
 
@@ -118,7 +118,7 @@ object TestDatabase: Command, KoinComponent
 
         val res = if (method.isSuspend) method.callSuspendBy(params)
         else method.callBy(params)
-        CommandSet.out.println("Result: $res")
+        sender.out("Result: $res")
         return true
     }
 

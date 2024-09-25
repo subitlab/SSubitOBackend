@@ -27,8 +27,8 @@ data class UserInfo(
     val phone: String,
 ): Principal
 {
-    suspend fun toUserFull() = toUserFull(email = emails.getUserEmails(id), seiue = studentIds.getSeiue(id),)
-    fun toUserFull(email: List<String>, seiue: List<UserFull.Seiue>) =
+    suspend fun toUserFull() = toUserFull(email = emails.getUserEmails(id), seiue = studentIds.getSeiue(id))
+    private fun toUserFull(email: List<String>, seiue: List<UserFull.Seiue>) =
         UserFull(
             id,
             username,

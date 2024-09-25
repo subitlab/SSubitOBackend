@@ -1,5 +1,8 @@
-package cn.org.subit.plugin
+@file:Suppress("PackageDirectoryMismatch")
 
+package cn.org.subit.plugin.apidocs
+
+import cn.org.subit.plugin.contentnegotiation.showJson
 import io.github.smiley4.ktorswaggerui.SwaggerUI
 import io.github.smiley4.ktorswaggerui.data.AuthKeyLocation
 import io.github.smiley4.ktorswaggerui.data.AuthScheme
@@ -12,14 +15,11 @@ import io.github.smiley4.schemakenerator.swagger.generateSwaggerSchema
 import io.github.smiley4.schemakenerator.swagger.withAutoTitle
 import io.ktor.server.application.*
 import io.ktor.server.plugins.ratelimit.*
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
 
 /**
  * 在/api-docs 路径下安装SwaggerUI
  */
-@OptIn(ExperimentalSerializationApi::class)
 fun Application.installApiDoc() = install(SwaggerUI)
 {
     info()
@@ -47,22 +47,11 @@ fun Application.installApiDoc() = install(SwaggerUI)
         }
     }
 
-    val json = Json()
-    {
-        encodeDefaults = true
-        prettyPrint = true
-        ignoreUnknownKeys = true
-        isLenient = true
-        explicitNulls = true
-        allowSpecialFloatingPointValues = true
-        decodeEnumsCaseInsensitive = true
-    }
-
     examples {
         encoder { type, example ->
             when (type)
             {
-                is KTypeDescriptor -> json.encodeToString(serializer(type.type), example)
+                is KTypeDescriptor -> showJson.encodeToString(serializer(type.type), example)
                 else               -> example
             }
         }

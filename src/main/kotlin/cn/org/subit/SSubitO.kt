@@ -3,7 +3,16 @@ package cn.org.subit
 import cn.org.subit.console.command.CommandSet.startCommandThread
 import cn.org.subit.database.SqlDatabase
 import cn.org.subit.logger.SSubitOLogger
-import cn.org.subit.plugin.*
+import cn.org.subit.plugin.apidocs.installApiDoc
+import cn.org.subit.plugin.authentication.installAuthentication
+import cn.org.subit.plugin.autohead.installAutoHead
+import cn.org.subit.plugin.contentnegotiation.installContentNegotiation
+import cn.org.subit.plugin.cors.installCORS
+import cn.org.subit.plugin.doublereceive.installDoubleReceive
+import cn.org.subit.plugin.koin.installKoin
+import cn.org.subit.plugin.rateLimit.installRateLimit
+import cn.org.subit.plugin.statuspages.installStatusPages
+import cn.org.subit.plugin.websockets.installWebSockets
 import cn.org.subit.route.router
 import cn.org.subit.utils.Power
 import io.ktor.server.application.*
@@ -124,13 +133,14 @@ fun Application.init()
 
     installApiDoc()
     installAuthentication()
-    installContentNegotiation()
     installAutoHead()
+    installContentNegotiation()
     installCORS()
     installDoubleReceive()
     installKoin()
-    installStatusPages()
     installRateLimit()
+    installStatusPages()
+    installWebSockets()
 
     SqlDatabase.apply { this@init.init() }
 

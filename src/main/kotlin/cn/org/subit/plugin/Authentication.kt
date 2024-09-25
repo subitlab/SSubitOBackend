@@ -1,11 +1,17 @@
-package cn.org.subit.plugin
+@file:Suppress("PackageDirectoryMismatch")
+
+package cn.org.subit.plugin.authentication
 
 import cn.org.subit.JWTAuth
 import cn.org.subit.JWTAuth.initJwtAuth
 import cn.org.subit.config.apiDocsConfig
+import io.ktor.http.*
+import io.ktor.http.auth.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
 
 /**
  * 安装登陆验证服务
@@ -17,6 +23,16 @@ fun Application.installAuthentication() = install(Authentication)
     // jwt验证, 这个验证是用于论坛正常的用户登陆
     jwt("ssubito-auth")
     {
+        authHeader {
+            val token = it.request.header(HttpHeaders.Authorization) ?: run {
+                val t = parseHeaderValue(it.request.header(HttpHeaders.SecWebSocketProtocol))
+                val index = t.indexOfFirst { headerValue -> headerValue.value == "Bearer" }
+                if (index == -1) return@authHeader null
+                it.response.header(HttpHeaders.SecWebSocketProtocol, "Bearer")
+                t.getOrNull(index + 1)?.value?.let { token -> "Bearer $token" }
+            }
+            token?.let(::parseAuthorizationHeader)
+        }
         verifier(JWTAuth.makeJwtVerifier()) // 设置验证器
         validate() // 设置验证函数
         {

@@ -1,7 +1,8 @@
-@file:Suppress("unused")
+@file:Suppress("unused", "NOTHING_TO_INLINE")
 
-package cn.org.subit.route
+package cn.org.subit.route.utils
 
+import cn.org.subit.utils.HttpStatus
 import io.github.smiley4.ktorswaggerui.data.ValueExampleDescriptor
 import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRequest
 import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRequestParameter
@@ -22,7 +23,7 @@ inline fun <reified T: Any> Context.get(
 /**
  * 辅助方法, 标记此方法返回需要传入begin和count, 用于分页
  */
-fun OpenApiRequest.paged()
+inline fun OpenApiRequest.paged()
 {
     queryParameter<Long>("begin")
     {
@@ -38,10 +39,11 @@ fun OpenApiRequest.paged()
     }
 }
 
-fun ApplicationCall.getPage(): Pair<Long, Int>
+inline fun ApplicationCall.getPage(): Pair<Long, Int>
 {
-    val begin = request.queryParameters["begin"]?.toLongOrNull() ?: 0
-    val count = request.queryParameters["count"]?.toIntOrNull() ?: 10
+    val begin = request.queryParameters["begin"]?.toLongOrNull() ?: finishCall(HttpStatus.BadRequest.subStatus("begin is required"))
+    val count = request.queryParameters["count"]?.toIntOrNull() ?: finishCall(HttpStatus.BadRequest.subStatus("count is required"))
+    if (begin < 0 || count < 0) finishCall(HttpStatus.BadRequest.subStatus("begin and count must be non-negative"))
     return begin to count
 }
 
@@ -53,4 +55,10 @@ inline fun <reified T> OpenApiSimpleBody.example(name: String, example: T)
 inline fun <reified T> OpenApiRequestParameter.example(any: T)
 {
     this.example = ValueExampleDescriptor("example", any)
+}
+
+fun ApplicationCall.getRealIp(): String
+{
+    val xForwardedFor = request.headers["X-Forwarded-For"]
+    return if (xForwardedFor.isNullOrBlank()) request.local.remoteHost else xForwardedFor
 }

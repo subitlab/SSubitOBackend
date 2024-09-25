@@ -6,18 +6,19 @@ import cn.org.subit.JWTAuth.getLoginUser
 import cn.org.subit.config.systemConfig
 import cn.org.subit.dataClasses.UserId
 import cn.org.subit.database.StudentIds
-import cn.org.subit.route.Context
-import cn.org.subit.route.get
+import cn.org.subit.plugin.contentnegotiation.dataJson
+import cn.org.subit.route.utils.Context
+import cn.org.subit.route.utils.finishCall
+import cn.org.subit.route.utils.finishCallWithRedirect
+import cn.org.subit.route.utils.get
 import cn.org.subit.utils.HttpStatus
 import cn.org.subit.utils.Locks
-import cn.org.subit.utils.respond
 import cn.org.subit.utils.statuses
 import io.github.smiley4.ktorswaggerui.dsl.routing.delete
 import io.github.smiley4.ktorswaggerui.dsl.routing.get
 import io.github.smiley4.ktorswaggerui.dsl.routing.post
 import io.github.smiley4.ktorswaggerui.dsl.routing.route
 import io.ktor.server.application.*
-import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -33,10 +34,12 @@ fun Route.seiue() = route("/seiue", {
         description = "绑定学号"
     })
     {
-        call.respondRedirect("https://passport.seiue.com/authorize?response_type=token" +
-                             "&client_id=${systemConfig.clientId}" +
-                             "&school_id=${systemConfig.schoolId}" +
-                             "&redirect_uri=${systemConfig.redirectUri}")
+        finishCallWithRedirect(
+            "https://passport.seiue.com/authorize?response_type=token" +
+            "&client_id=${systemConfig.clientId}" +
+            "&school_id=${systemConfig.schoolId}" +
+            "&redirect_uri=${systemConfig.redirectUri}"
+        )
     }
 
     post("/bind", {
@@ -108,36 +111,37 @@ private val addBindLocks = Locks<String>()
 
 private suspend fun Context.postBind()
 {
-    val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
+    val loginUser = getLoginUser() ?: finishCall(HttpStatus.Unauthorized)
     val token = call.request.queryParameters["access_token"]
-    val activeReflectionId = call.request.queryParameters["active_reflection_id"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val activeReflectionId =
+        call.request.queryParameters["active_reflection_id"]?.toLongOrNull() ?: finishCall(HttpStatus.BadRequest)
 
     val result = withContext(Dispatchers.IO)
-    {
-        @Suppress("DEPRECATION")
-        val url = URL("https://open.seiue.com/api/v3/oauth/me")
-        val connection = url.openConnection() as HttpURLConnection
-        connection.setRequestProperty("Authorization", "Bearer $token")
-        connection.setRequestProperty("X-Reflection-Id", activeReflectionId.toString())
-        connection.requestMethod = "GET"
-        runCatching { connection.inputStream.bufferedReader().readText() }.getOrNull()
-    } ?: return call.respond(HttpStatus.BadRequest.copy(message = "seiue token 无效"))
+                 {
+                     @Suppress("DEPRECATION")
+                     val url = URL("https://open.seiue.com/api/v3/oauth/me")
+                     val connection = url.openConnection() as HttpURLConnection
+                     connection.setRequestProperty("Authorization", "Bearer $token")
+                     connection.setRequestProperty("X-Reflection-Id", activeReflectionId.toString())
+                     connection.requestMethod = "GET"
+                     runCatching { connection.inputStream.bufferedReader().readText() }.getOrNull()
+                 } ?: finishCall(HttpStatus.BadRequest.copy(message = "seiue token 无效"))
 
-    val seiue = StudentIds.json.decodeFromString(Seiue.serializer(), result)
-    if (seiue.usin == null) return call.respond(HttpStatus.BadRequest.copy(message = "seiue token 无效(学号为空)"))
+    val seiue = dataJson.decodeFromString(Seiue.serializer(), result)
+    if (seiue.usin == null) finishCall(HttpStatus.BadRequest.copy(message = "seiue token 无效(学号为空)"))
     val studentIds = get<StudentIds>()
 
     if (seiue.school_id != systemConfig.schoolId)
-        return call.respond(HttpStatus.BadRequest.copy(message = "学校不匹配"))
+        finishCall(HttpStatus.BadRequest.copy(message = "学校不匹配"))
 
     addBindLocks.withLock<Nothing>(seiue.usin)
     {
         if (studentIds.getStudentIdUsers(seiue.usin) != null)
-            return call.respond(HttpStatus.EmailExist.copy(message = "学号已存在"))
+            finishCall(HttpStatus.EmailExist.copy(message = "学号已存在"))
         else
         {
             studentIds.addStudentId(loginUser.id, seiue.usin, seiue.name, !seiue.status.equals("normal", true), result)
-            return call.respond(HttpStatus.OK, "学号添加成功")
+            finishCall(HttpStatus.OK, "学号添加成功")
         }
     }
 }
@@ -146,17 +150,17 @@ private val deleteBindLocks = Locks<UserId>()
 
 private suspend fun Context.deleteBind()
 {
-    val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
-    val studentId = call.request.queryParameters["studentId"] ?: return call.respond(HttpStatus.BadRequest)
+    val loginUser = getLoginUser() ?: finishCall(HttpStatus.Unauthorized)
+    val studentId = call.request.queryParameters["studentId"] ?: finishCall(HttpStatus.BadRequest)
     val studentIds = get<StudentIds>()
 
     deleteBindLocks.withLock<Nothing>(loginUser.id)
     {
         if (studentIds.getStudentIdCount(loginUser.id) >= 2)
         {
-            if (studentIds.removeStudentId(loginUser.id, studentId)) return call.respond(HttpStatus.OK)
-            else return call.respond(HttpStatus.NotFound)
+            if (studentIds.removeStudentId(loginUser.id, studentId)) finishCall(HttpStatus.OK)
+            else finishCall(HttpStatus.NotFound)
         }
-        else return call.respond(HttpStatus.BadRequest.copy(message = "无法解绑唯一的希悦账号"))
+        else finishCall(HttpStatus.BadRequest.copy(message = "无法解绑唯一的希悦账号"))
     }
 }

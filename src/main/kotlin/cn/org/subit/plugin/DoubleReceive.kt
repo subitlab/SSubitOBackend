@@ -1,4 +1,6 @@
-package cn.org.subit.plugin
+@file:Suppress("PackageDirectoryMismatch")
+
+package cn.org.subit.plugin.doublereceive
 
 import io.ktor.http.*
 import io.ktor.server.application.*

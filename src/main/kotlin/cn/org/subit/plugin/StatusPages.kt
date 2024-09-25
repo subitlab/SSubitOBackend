@@ -1,4 +1,6 @@
-package cn.org.subit.plugin
+@file:Suppress("PackageDirectoryMismatch")
+
+package cn.org.subit.plugin.statuspages
 
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -6,6 +8,8 @@ import io.ktor.server.plugins.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.request.*
 import cn.org.subit.logger.SSubitOLogger
+import cn.org.subit.plugin.rateLimit.RateLimit
+import cn.org.subit.route.utils.CallFinish
 import cn.org.subit.utils.HttpStatus
 import cn.org.subit.utils.respond
 import io.ktor.server.response.*
@@ -17,6 +21,8 @@ import kotlin.time.Duration.Companion.seconds
 fun Application.installStatusPages() = install(StatusPages)
 {
     val logger = SSubitOLogger.getLogger()
+
+    exception<CallFinish> { call, finish -> finish.block(call) }
     exception<BadRequestException> { call, _ -> call.respond(HttpStatus.BadRequest) }
     exception<Throwable>
     { call, throwable ->
@@ -46,6 +52,4 @@ fun Application.installStatusPages() = install(StatusPages)
         if (!call.request.path().startsWith("$rootPath/api-docs") && call.response.responseType == null)
             call.respond(HttpStatus.Unauthorized)
     }
-
-
 }
