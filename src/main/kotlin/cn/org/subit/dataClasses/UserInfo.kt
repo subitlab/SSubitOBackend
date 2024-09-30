@@ -7,6 +7,7 @@ import cn.org.subit.database.StudentIds
 import cn.org.subit.database.Users
 import io.ktor.server.auth.*
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -25,7 +26,7 @@ data class UserInfo(
     val registrationTime: Long,
     val permission: Permission,
     val phone: String,
-): Principal
+): SsoPrincipal
 {
     suspend fun toUserFull() = toUserFull(email = emails.getUserEmails(id), seiue = studentIds.getSeiue(id))
     private fun toUserFull(email: List<String>, seiue: List<UserFull.Seiue>) =
@@ -47,6 +48,8 @@ data class UserInfo(
         private val studentIds: StudentIds by inject()
     }
 }
+
+val UserInfo?.hasAdmin get() = this != null && permission >= Permission.ADMIN
 
 /**
  * 完整用户数据
@@ -72,6 +75,21 @@ data class UserFull(
     )
 
     fun toBasicUserInfo() = BasicUserInfo(id, username, registrationTime, email)
+    val hasAdmin get() = permission >= Permission.ADMIN
+
+    companion object
+    {
+        val example get() = UserFull(
+            id = UserId(1),
+            email = listOf("email1@example.com", "email2@example.com", "email3@example.com"),
+            phone = "12345678901",
+            username = "username",
+            seiue = listOf(UserFull.Seiue("studentId", "realName", false)),
+            studentId = mapOf("studentId" to "realName"),
+            permission = Permission.NORMAL,
+            registrationTime = System.currentTimeMillis()
+        )
+    }
 }
 
 @Serializable
@@ -81,3 +99,9 @@ data class BasicUserInfo(
     val registrationTime: Long,
     val email: List<String>,
 )
+{
+    companion object
+    {
+        val example get() = UserFull.example.toBasicUserInfo()
+    }
+}

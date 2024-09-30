@@ -3,10 +3,13 @@ package cn.org.subit
 import at.favre.lib.crypto.bcrypt.BCrypt
 import cn.org.subit.console.SimpleAnsiColor.Companion.CYAN
 import cn.org.subit.console.SimpleAnsiColor.Companion.RED
-import cn.org.subit.dataClasses.UserInfo
-import cn.org.subit.dataClasses.UserId
+import cn.org.subit.dataClasses.*
+import cn.org.subit.dataClasses.ServiceId.Companion.toServiceId
+import cn.org.subit.dataClasses.UserId.Companion.toUserId
+import cn.org.subit.database.Services
 import cn.org.subit.database.Users
 import cn.org.subit.logger.SSubitOLogger
+import cn.org.subit.utils.toEnumOrNull
 import com.auth0.jwt.JWT
 import com.auth0.jwt.JWTVerifier
 import com.auth0.jwt.algorithms.Algorithm
@@ -22,6 +25,7 @@ import java.time.OffsetDateTime
 import java.util.*
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * JWT验证
@@ -31,6 +35,7 @@ object JWTAuth: KoinComponent
 {
     private val logger = SSubitOLogger.getLogger()
     private val users: Users by inject()
+    private val services: Services by inject()
 
     @Serializable
     data class Token(val token: String)
@@ -46,9 +51,63 @@ object JWTAuth: KoinComponent
     private lateinit var algorithm: Algorithm
 
     /**
-     * JWT有效期
+     * 用户JWT Token有效期
      */
-    private val VALIDITY: Duration = 7.days
+    val USER_TOKEN_VALIDITY: Duration = 90.days
+
+    /**
+     * 服务JWT Token有效期
+     */
+     val SERVICE_TOKEN_VALIDITY: Duration = 90.days
+
+    /**
+     * OAuth授权码有效期
+     */
+    val OAUTH_CODE_VALIDITY: Duration = 10.minutes
+
+    /**
+     * OAuth access token最长有效期
+     */
+    val OAUTH_ACCESS_TOKEN_MAX_VALIDITY: Duration = 30.days
+
+    /**
+     * OAuth access token默认有效期
+     */
+    val OAUTH_ACCESS_TOKEN_DEFAULT_VALIDITY: Duration = 1.days
+
+    /**
+     * OAuth refresh token有效期
+     */
+    val OAUTH_REFRESH_TOKEN_VALIDITY: Duration = 90.days
+
+    enum class TokenType
+    {
+        /**
+         * 用户, 验证对应的Principal为[UserInfo]
+         */
+        USER,
+
+        /**
+         * 服务, 验证对应的Principal为[ServiceInfo]
+         */
+        SERVICE,
+
+        /**
+         * OAuth授权码, 验证对应的Principal为[OAuthCodePrincipal]
+         */
+        OAUTH_CODE,
+
+        /**
+         * OAuth access token, 验证对应的Principal为[OAuthAccessTokenPrincipal]
+         */
+        OAUTH_ACCESS_TOKEN,
+
+        /**
+         * OAuth refresh token, 验证对应的Principal为[OAuthRefreshTokenPrincipal]
+         */
+        OAUTH_REFRESH_TOKEN
+    }
+
     fun Application.initJwtAuth()
     {
         // 从配置文件中读取密钥
@@ -71,31 +130,84 @@ object JWTAuth: KoinComponent
      */
     fun makeJwtVerifier(): JWTVerifier = JWT.require(algorithm).build()
 
-    /**
-     * 生成Token
-     * @param id 用户ID
-     */
-    fun makeToken(id: UserId): Token = JWT.create()
+    private fun makeToken(type: TokenType, validity: Duration, vararg claims: Pair<String, Int>): Token = JWT.create()
         .withSubject("Authentication")
-        .withClaim("id", id.value)
-        .withExpiresAt((OffsetDateTime.now().toInstant().toKotlinInstant() + VALIDITY).toJavaInstant())
+        .withClaim("type", type.name)
+        .apply { claims.forEach { (k, v) -> withClaim(k, v) } }
+        .withExpiresAt((OffsetDateTime.now().toInstant().toKotlinInstant() + validity).toJavaInstant())
         .withIssuer("subit")
         .withIssuedAt(OffsetDateTime.now().toInstant().toKotlinInstant().toJavaInstant())
         .sign(algorithm)
         .let(::Token)
 
-    suspend fun checkToken(token: Payload): UserInfo?
+    fun makeUserToken(user: UserId) =
+        makeToken(TokenType.USER, USER_TOKEN_VALIDITY, "id" to user.value)
+    fun makeServiceToken(service: ServiceId) =
+        makeToken(TokenType.SERVICE, SERVICE_TOKEN_VALIDITY, "id" to service.value)
+    fun makeOAuthCodeToken(user: UserId) =
+        makeToken(TokenType.OAUTH_CODE, OAUTH_CODE_VALIDITY, "id" to user.value)
+    fun makeOAuthAccessToken(service: ServiceId, user: UserId, validity: Duration) =
+        if (validity > OAUTH_ACCESS_TOKEN_MAX_VALIDITY) null
+        else makeToken(TokenType.OAUTH_ACCESS_TOKEN, validity, "service" to service.value, "user" to user.value)
+    fun makeOAuthRefreshToken(service: ServiceId, user: UserId) =
+        makeToken(TokenType.OAUTH_REFRESH_TOKEN, OAUTH_REFRESH_TOKEN_VALIDITY, "service" to service.value, "user" to user.value)
+
+    suspend fun checkToken(token: Payload): SsoPrincipal?
     {
-        val (userFull, lastPswChange) =
-            users.getUserWithLastPasswordChange(token.getClaim("id").asInt().let(::UserId)) ?: return null
-
-        val tokenTime = token.issuedAtAsInstant.toKotlinInstant()
-
-        if (lastPswChange > tokenTime) return null
-        return userFull
+        val tokenType = token.getClaim("type").asString().toEnumOrNull<TokenType>() ?: return null
+        logger.config("Check token type: $tokenType")
+        return when (tokenType)
+        {
+            TokenType.USER ->
+            {
+                val (userInfo, lastPswChange) =
+                    users.getUserWithLastPasswordChange(token.getClaim("id").asInt().toUserId()) ?: return null
+                val tokenTime = token.issuedAtAsInstant.toKotlinInstant()
+                if (lastPswChange > tokenTime) return null
+                userInfo
+            }
+            TokenType.SERVICE ->
+            {
+                val (service, revokedTime) =
+                    services.getServiceWithSecretRevokedTime(token.getClaim("id").asInt().toServiceId()) ?: return null
+                val tokenTime = token.issuedAtAsInstant.toKotlinInstant()
+                if (revokedTime > tokenTime) return null
+                service
+            }
+            TokenType.OAUTH_CODE ->
+            {
+                OAuthCodePrincipal(token.getClaim("id").asInt().toUserId())
+            }
+            TokenType.OAUTH_ACCESS_TOKEN ->
+            {
+                val (service, revokedTime) =
+                    services.getServiceWithSecretRevokedTime(token.getClaim("id").asInt().toServiceId()) ?: return null
+                val tokenTime = token.issuedAtAsInstant.toKotlinInstant()
+                if (revokedTime > tokenTime) return null
+                OAuthAccessTokenPrincipal(
+                    token.getClaim("user").asInt().toUserId(),
+                    service
+                )
+            }
+            TokenType.OAUTH_REFRESH_TOKEN ->
+            {
+                val (service, revokedTime) =
+                    services.getServiceWithSecretRevokedTime(token.getClaim("id").asInt().toServiceId()) ?: return null
+                val tokenTime = token.issuedAtAsInstant.toKotlinInstant()
+                if (revokedTime > tokenTime) return null
+                OAuthRefreshTokenPrincipal(
+                    token.getClaim("user").asInt().toUserId(),
+                    service
+                )
+            }
+        }
     }
 
     fun PipelineContext<*, ApplicationCall>.getLoginUser(): UserInfo? = call.principal<UserInfo>()
+    fun PipelineContext<*, ApplicationCall>.getLoginService(): ServiceInfo? = call.principal<ServiceInfo>()
+    fun PipelineContext<*, ApplicationCall>.getOAuthCodeUser(): UserId? = call.principal<OAuthCodePrincipal>()?.user
+    fun PipelineContext<*, ApplicationCall>.getOAuthAccessToken(): OAuthAccessTokenPrincipal? = call.principal<OAuthAccessTokenPrincipal>()
+    fun PipelineContext<*, ApplicationCall>.getOAuthRefreshToken(): OAuthRefreshTokenPrincipal? = call.principal<OAuthRefreshTokenPrincipal>()
 
     private val hasher = BCrypt.with(BCrypt.Version.VERSION_2B)
     private val verifier = BCrypt.verifyer(BCrypt.Version.VERSION_2B)

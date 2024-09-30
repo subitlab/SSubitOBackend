@@ -58,15 +58,24 @@ fun Application.installApiDoc() = install(SwaggerUI)
     }
 
     security {
-        securityScheme("JWT")
+        securityScheme("Authorization")
         {
             name = "Authorization"
             scheme = AuthScheme.BEARER
             location = AuthKeyLocation.HEADER
-            description = "JWT Token"
+            description = "用户Token/服务Token/access token/refresh token"
             bearerFormat = "Bearer <token>"
             type = AuthType.HTTP
         }
-        defaultSecuritySchemeNames("JWT")
+        securityScheme("Oauth-Code")
+        {
+            name = "Oauth-Code"
+            scheme = AuthScheme.BEARER
+            location = AuthKeyLocation.HEADER
+            description = "OAuth Code"
+            bearerFormat = "Bearer <code>"
+            type = AuthType.API_KEY
+        }
+        defaultSecuritySchemeNames("Authorization")
     }
 }

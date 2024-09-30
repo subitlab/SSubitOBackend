@@ -5,6 +5,9 @@ import cn.org.subit.database.Emails
 import cn.org.subit.database.StudentIds
 import cn.org.subit.database.Users
 import cn.org.subit.debug
+import cn.org.subit.plugin.contentnegotiation.contentNegotiationJson
+import kotlinx.serialization.InternalSerializationApi
+import kotlinx.serialization.serializer
 import org.jline.reader.Candidate
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
@@ -58,6 +61,7 @@ object TestDatabase: Command, KoinComponent
     /**
      * 从字符串转为某个对象, 应和[toStr]对应
      */
+    @OptIn(InternalSerializationApi::class)
     private fun fromStr(str: String, clazz: KClass<*>): Any? = if (str == "null") null
     else when (clazz)
     {
@@ -84,6 +88,10 @@ object TestDatabase: Command, KoinComponent
                 val property = clazz.declaredMemberProperties.first()
                 val value = fromStr(str, property.returnType.classifier as KClass<*>)
                 clazz.constructors.first().call(value)
+            }
+            else if (clazz.isData)
+            {
+                contentNegotiationJson.decodeFromString(clazz.serializer(), str)
             }
             else if (clazz.objectInstance != null) clazz.objectInstance!!
             else throw IllegalArgumentException("Unsupported class. $clazz")

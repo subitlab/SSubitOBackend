@@ -142,7 +142,7 @@ fun Route.basic() = route("/auth", {
         this.response {
             statuses<JWTAuth.Token>(HttpStatus.OK, example = JWTAuth.Token("token"))
             statuses(
-                HttpStatus.Unauthorized,
+                HttpStatus.NotLoggedIn,
                 HttpStatus.PasswordError,
                 HttpStatus.PasswordFormatError,
             )
@@ -213,7 +213,7 @@ private suspend fun Context.register()
     }
 
     // 创建成功, 返回token
-    val token = JWTAuth.makeToken(id)
+    val token = JWTAuth.makeUserToken(id)
     finishCall(HttpStatus.OK, token)
 }
 
@@ -230,7 +230,7 @@ private suspend fun Context.login()
     // 若登陆失败，返回错误信息
     if (checked == null) finishCall(HttpStatus.PasswordError)
     if (users.getUser(checked)?.permission == Permission.BANNED) finishCall(HttpStatus.Prohibit)
-    val token = JWTAuth.makeToken(checked)
+    val token = JWTAuth.makeUserToken(checked)
     finishCall(HttpStatus.OK, token)
 }
 
@@ -244,7 +244,7 @@ private suspend fun Context.loginByCode()
         finishCall(HttpStatus.WrongEmailCode)
     val user = get<Emails>().getEmailUsers(loginInfo.email) ?: finishCall(HttpStatus.AccountNotExist)
     if (get<Users>().getUser(user)?.permission == Permission.BANNED) finishCall(HttpStatus.Prohibit)
-    val token = JWTAuth.makeToken(user)
+    val token = JWTAuth.makeUserToken(user)
     finishCall(HttpStatus.OK, token)
 }
 
@@ -277,11 +277,11 @@ private suspend fun Context.changePassword()
     val users = get<Users>()
 
     val (oldPassword, newPassword) = call.receive<ChangePasswordInfo>()
-    val user = getLoginUser() ?: finishCall(HttpStatus.Unauthorized)
+    val user = getLoginUser() ?: finishCall(HttpStatus.NotLoggedIn)
     if (!users.checkLogin(user.id, oldPassword)) finishCall(HttpStatus.PasswordError)
     if (!checkPassword(newPassword)) finishCall(HttpStatus.PasswordFormatError)
     users.setPassword(user.id, newPassword)
-    val token = JWTAuth.makeToken(user.id)
+    val token = JWTAuth.makeUserToken(user.id)
     finishCall(HttpStatus.OK, token)
 }
 
@@ -310,7 +310,7 @@ private suspend fun Context.addEmail()
     val addEmailInfo = call.receive<AddEmailInfo>()
     if (!get<EmailCodes>().verifyEmailCode(addEmailInfo.email, addEmailInfo.code, EmailCodes.EmailCodeUsage.ADD_EMAIL))
         finishCall(HttpStatus.WrongEmailCode)
-    val user = getLoginUser() ?: finishCall(HttpStatus.Unauthorized)
+    val user = getLoginUser() ?: finishCall(HttpStatus.NotLoggedIn)
     get<Emails>().addEmail(user.id, addEmailInfo.email)
     finishCall(HttpStatus.OK)
 }
@@ -318,7 +318,7 @@ private suspend fun Context.addEmail()
 private suspend fun Context.deleteEmail()
 {
     val email = call.request.queryParameters["email"] ?: finishCall(HttpStatus.BadRequest)
-    val user = getLoginUser() ?: finishCall(HttpStatus.Unauthorized)
+    val user = getLoginUser() ?: finishCall(HttpStatus.NotLoggedIn)
     if (get<Emails>().removeEmail(user.id, email)) finishCall(HttpStatus.OK)
     finishCall(HttpStatus.AccountNotExist.copy(message = "邮箱不存在"))
 }

@@ -15,6 +15,9 @@ import cn.org.subit.utils.respond
 import io.ktor.server.response.*
 import kotlin.time.Duration.Companion.seconds
 
+private fun ApplicationCall.hasResponseBody() =
+    (this.response.headers[HttpHeaders.ContentLength]?.toLongOrNull() ?: 0) > 0
+
 /**
  * 对于不同的状态码返回不同的页面
  */
@@ -22,7 +25,10 @@ fun Application.installStatusPages() = install(StatusPages)
 {
     val logger = SSubitOLogger.getLogger()
 
-    exception<CallFinish> { call, finish -> finish.block(call) }
+    exception<CallFinish> { call, finish ->
+        logger.config("CallFinish in ${call.request.path()}", finish)
+        finish.block(call)
+    }
     exception<BadRequestException> { call, _ -> call.respond(HttpStatus.BadRequest) }
     exception<Throwable>
     { call, throwable ->
@@ -30,6 +36,10 @@ fun Application.installStatusPages() = install(StatusPages)
             .warning("出现位置错误, 访问接口: ${call.request.path()}", throwable)
         call.respond(HttpStatus.InternalServerError)
     }
+
+    status(HttpStatusCode.NotFound) { _ -> if (!call.hasResponseBody()) call.respond(HttpStatus.NotFound) }
+    status(HttpStatusCode.Forbidden) { _ -> if (!call.hasResponseBody()) call.respond(HttpStatus.Forbidden) }
+    status(HttpStatusCode.BadRequest) { _ -> if (!call.hasResponseBody()) call.respond(HttpStatus.BadRequest) }
 
     /** 针对请求过于频繁的处理, 详见[RateLimit] */
     status(HttpStatusCode.TooManyRequests)
@@ -43,13 +53,5 @@ fun Application.installStatusPages() = install(StatusPages)
         if (type == null)
             return@status call.respond(HttpStatus.TooManyRequests.copy(message = "请求过于频繁, 请${time}后再试"))
         type.customResponse(call, time)
-    }
-
-    status(HttpStatusCode.Unauthorized)
-    { _ ->
-        val rootPath = this.call.application.environment.rootPath
-        // 如果不是api docs还没有返回体的话, 说明是携带了token但token不合法, 返回401
-        if (!call.request.path().startsWith("$rootPath/api-docs") && call.response.responseType == null)
-            call.respond(HttpStatus.Unauthorized)
     }
 }

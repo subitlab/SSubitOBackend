@@ -111,7 +111,7 @@ private val addBindLocks = Locks<String>()
 
 private suspend fun Context.postBind()
 {
-    val loginUser = getLoginUser() ?: finishCall(HttpStatus.Unauthorized)
+    val loginUser = getLoginUser() ?: finishCall(HttpStatus.NotLoggedIn)
     val token = call.request.queryParameters["access_token"]
     val activeReflectionId =
         call.request.queryParameters["active_reflection_id"]?.toLongOrNull() ?: finishCall(HttpStatus.BadRequest)
@@ -150,7 +150,7 @@ private val deleteBindLocks = Locks<UserId>()
 
 private suspend fun Context.deleteBind()
 {
-    val loginUser = getLoginUser() ?: finishCall(HttpStatus.Unauthorized)
+    val loginUser = getLoginUser() ?: finishCall(HttpStatus.NotLoggedIn)
     val studentId = call.request.queryParameters["studentId"] ?: finishCall(HttpStatus.BadRequest)
     val studentIds = get<StudentIds>()
 

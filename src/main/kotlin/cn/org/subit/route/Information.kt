@@ -29,6 +29,7 @@ import io.ktor.server.routing.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
 
@@ -53,22 +54,14 @@ fun Route.info() = route("", {
             statuses<UserFull>(
                 HttpStatus.OK.copy(message = "获取完整用户信息成功"),
                 bodyDescription = "当id为0, 即获取当前用户信息或user权限不低于ADMIN时返回",
-                example = UserFull(
-                    id = UserId(1),
-                    email = listOf("email1@example.com", "email2@example.com", "email3@example.com"),
-                    phone = "12345678901",
-                    username = "username",
-                    seiue = listOf(UserFull.Seiue("studentId", "realName", false)),
-                    studentId = mapOf("studentId" to "realName"),
-                    permission = Permission.NORMAL,
-                    registrationTime = System.currentTimeMillis()
-                )
+                example = UserFull.example,
             )
             statuses<BasicUserInfo>(
                 HttpStatus.OK.copy(message = "获取基础用户的信息成功"),
-                bodyDescription = "当id不为0即获取其他用户的信息且user权限低于ADMIN时返回"
+                bodyDescription = "当id不为0即获取其他用户的信息且user权限低于ADMIN时返回",
+                example = BasicUserInfo.example,
             )
-            statuses(HttpStatus.NotFound, HttpStatus.Unauthorized)
+            statuses(HttpStatus.NotFound, HttpStatus.NotLoggedIn)
         }
     }) { getUserInfo() }
 
@@ -106,7 +99,7 @@ fun Route.info() = route("", {
                 HttpStatus.OK,
                 HttpStatus.NotFound,
                 HttpStatus.Forbidden,
-                HttpStatus.Unauthorized,
+                HttpStatus.NotLoggedIn,
                 HttpStatus.PayloadTooLarge,
                 HttpStatus.UnsupportedMediaType
             )
@@ -123,15 +116,8 @@ fun Route.info() = route("", {
             }
         }
         response {
-            statuses(HttpStatus.BadRequest, HttpStatus.Unauthorized)
-            HttpStatus.OK.code to {
-                description = "获取头像成功"
-                body<File>()
-                {
-                    description = "获取到的头像, 总是png格式的"
-                    mediaTypes(ContentType.Image.PNG)
-                }
-            }
+            statuses(ContentType.Image.PNG, HttpStatus.OK, bodyDescription = "获取到的头像, 总是png格式的")
+            statuses(HttpStatus.BadRequest, HttpStatus.NotLoggedIn)
         }
     }) { getAvatar() }
 
@@ -149,7 +135,7 @@ fun Route.info() = route("", {
                 HttpStatus.OK,
                 HttpStatus.NotFound,
                 HttpStatus.Forbidden,
-                HttpStatus.Unauthorized,
+                HttpStatus.NotLoggedIn,
             )
         }
     }) { deleteAvatar() }
@@ -162,51 +148,56 @@ private suspend fun Context.getUserInfo()
     logger.config("user=${loginUser?.id} get user info id=$id")
     if (id == UserId(0))
     {
-        if (loginUser == null) finishCall(HttpStatus.Unauthorized)
+        if (loginUser == null) finishCall(HttpStatus.NotLoggedIn)
         finishCall(HttpStatus.OK, loginUser.toUserFull())
     }
     else
     {
         val user = get<Users>().getUser(id) ?: finishCall(HttpStatus.NotFound)
-        if (loginUser != null && loginUser.permission >= Permission.READONLY_ADMIN)
+        if (loginUser != null && loginUser.permission >= Permission.ADMIN)
             finishCall(HttpStatus.OK, user.toUserFull())
         else
             finishCall(HttpStatus.OK, user.toUserFull().toBasicUserInfo())
     }
 }
 
-private suspend fun Context.changeAvatar()
+private suspend fun Context.changeAvatar(): Nothing
 {
     val id = call.parameters["id"]?.toUserIdOrNull() ?: finishCall(HttpStatus.BadRequest)
-    val loginUser = getLoginUser() ?: finishCall(HttpStatus.Unauthorized)
+    val loginUser = getLoginUser() ?: finishCall(HttpStatus.NotLoggedIn)
     // 检查body大小
     val size = call.request.headers["Content-Length"]?.toLongOrNull() ?: finishCall(HttpStatus.BadRequest)
     // 若图片大于10MB( 10 << 20 ), 返回请求实体过大
     if (size >= 10 shl 20) finishCall(HttpStatus.PayloadTooLarge)
-    val image = runCatching()
-                {
-                    withContext(Dispatchers.IO)
-                    {
-                        ImageIO.read(call.receiveStream())
-                    }
-                }.getOrNull() ?: finishCall(HttpStatus.UnsupportedMediaType)
+    suspend fun getImage(): BufferedImage
+    {
+        return runCatching()
+        {
+            withContext(Dispatchers.IO)
+            {
+                ImageIO.read(call.receiveStream())
+            }
+        }.getOrNull() ?: finishCall(HttpStatus.UnsupportedMediaType)
+    }
+    logger.config("user=${loginUser} change avatar id=$id")
     if (id == UserId(0) && loginUser.permission >= Permission.NORMAL)
     {
-        FileUtils.setAvatar(loginUser.id, image)
+        FileUtils.setAvatar(loginUser.id, getImage())
+        finishCall(HttpStatus.OK)
     }
     else
     {
         if (loginUser.permission < Permission.ADMIN) finishCall(HttpStatus.Forbidden)
         val user = get<Users>().getUser(id) ?: finishCall(HttpStatus.NotFound)
-        FileUtils.setAvatar(user.id, image)
+        FileUtils.setAvatar(user.id, getImage())
+        finishCall(HttpStatus.OK)
     }
-    finishCall(HttpStatus.OK)
 }
 
 private suspend fun Context.deleteAvatar()
 {
     val id = call.parameters["id"]?.toUserIdOrNull() ?: finishCall(HttpStatus.BadRequest)
-    val loginUser = getLoginUser() ?: finishCall(HttpStatus.Unauthorized)
+    val loginUser = getLoginUser() ?: finishCall(HttpStatus.NotLoggedIn)
     if (id == UserId(0))
     {
         FileUtils.setDefaultAvatar(loginUser.id)
@@ -224,7 +215,7 @@ private suspend fun Context.deleteAvatar()
 private fun Context.getAvatar()
 {
     val id = (call.parameters["id"]?.toUserIdOrNull() ?: finishCall(HttpStatus.BadRequest)).let {
-        if (it == UserId(0)) getLoginUser()?.id ?: finishCall(HttpStatus.Unauthorized)
+        if (it == UserId(0)) getLoginUser()?.id ?: finishCall(HttpStatus.NotLoggedIn)
         else it
     }
     val avatar = FileUtils.getAvatar(id)
@@ -236,7 +227,7 @@ private data class ChangeUsername(val username: String)
 
 private suspend fun Context.changeUsername()
 {
-    val loginUser = getLoginUser() ?: finishCall(HttpStatus.Unauthorized)
+    val loginUser = getLoginUser() ?: finishCall(HttpStatus.NotLoggedIn)
     val username = call.receive<ChangeUsername>().username
     if (!checkUsername(username)) finishCall(HttpStatus.UsernameFormatError)
     get<Users>().setUsername(loginUser.id, username)

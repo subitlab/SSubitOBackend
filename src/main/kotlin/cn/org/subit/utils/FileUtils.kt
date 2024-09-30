@@ -1,5 +1,6 @@
 package cn.org.subit.utils
 
+import cn.org.subit.dataClasses.ServiceId
 import cn.org.subit.dataClasses.UserId
 import cn.org.subit.dataDir
 import cn.org.subit.logger.SSubitOLogger
@@ -16,23 +17,34 @@ import javax.imageio.ImageIO
 object FileUtils
 {
     private val logger = SSubitOLogger.getLogger()
-    private val avatarFolder = File(dataDir, "/avatars")
+    private val avatarFolder = File(dataDir, "avatars")
+    private val serverAvatarFolder = File(dataDir, "serverAvatars")
     private val defaultAvatarFolder = File(avatarFolder, "default")
     private const val AVATAR_SIZE = 512
 
     init
     {
         avatarFolder.mkdirs()
+        serverAvatarFolder.mkdirs()
         defaultAvatarFolder.mkdirs()
     }
 
-    fun setAvatar(user: UserId, avatar: BufferedImage)
+    private fun toString(int: Int) = int.toString(36).padStart(6, '0')
+
+    private val emptyAvatar get() = BufferedImage(AVATAR_SIZE, AVATAR_SIZE, BufferedImage.TYPE_INT_ARGB)
+
+    fun setAvatar(user: UserId, avatar: BufferedImage) =
+        setAvatar(File(avatarFolder, toString(user.value)), avatar)
+
+    fun setAvatar(service: ServiceId, avatar: BufferedImage) =
+        setAvatar(File(serverAvatarFolder, toString(service.value)), avatar)
+
+    private fun setAvatar(folder: File, avatar: BufferedImage)
     {
-        val userAvatarFolder = File(avatarFolder, user.value.toString(16).padStart(16, '0'))
-        userAvatarFolder.mkdirs()
+        folder.mkdirs()
         // 文件夹中已有的头像数量
-        val avatarCount = userAvatarFolder.listFiles()?.size ?: 0
-        val avatarFile = File(userAvatarFolder, "${avatarCount}.png")
+        val avatarCount = folder.listFiles()?.size ?: 0
+        val avatarFile = File(folder, "${toString(avatarCount)}.png")
         avatarFile.createNewFile()
         // 将头像大小调整为 1024x1024
         val resizedAvatar = BufferedImage(AVATAR_SIZE, AVATAR_SIZE, BufferedImage.TYPE_INT_ARGB)
@@ -45,29 +57,34 @@ object FileUtils
 
     fun setDefaultAvatar(user: UserId): BufferedImage
     {
-        val userAvatarFolder = File(avatarFolder, user.value.toString(16).padStart(16, '0'))
+        val userAvatarFolder = File(avatarFolder, toString(user.value))
         userAvatarFolder.mkdirs()
         // 文件夹中已有的头像数量
         val avatarCount = userAvatarFolder.listFiles()?.size ?: 0
-        val avatarFile = File(userAvatarFolder, "${avatarCount}.png")
+        val avatarFile = File(userAvatarFolder, "${toString(avatarCount)}.png")
         // 在默认头像文件夹中随机选择一个头像
         val defaultAvatarFiles = defaultAvatarFolder.listFiles()
         val defaultAvatar = defaultAvatarFiles?.randomOrNull()
         if (defaultAvatar == null)
         {
             logger.warning("No default avatar found")
-            return BufferedImage(AVATAR_SIZE, AVATAR_SIZE, BufferedImage.TYPE_INT_ARGB)
+            return emptyAvatar
         }
         // 保存头像
         defaultAvatar.copyTo(avatarFile)
         return ImageIO.read(defaultAvatar)
     }
 
-    fun getAvatar(user: UserId): BufferedImage
+    fun getAvatar(user: UserId): BufferedImage =
+        getAvatar(File(avatarFolder, toString(user.value))) ?: setDefaultAvatar(user)
+
+    fun getAvatar(service: ServiceId): BufferedImage =
+        getAvatar(File(serverAvatarFolder, toString(service.value))) ?: emptyAvatar
+
+    private fun getAvatar(folder: File): BufferedImage?
     {
-        val userAvatarFolder = File(avatarFolder, user.value.toString(16).padStart(16, '0'))
-        val avatarCount = userAvatarFolder.listFiles()?.size ?: 0
-        val avatarFile = File(userAvatarFolder, "${avatarCount-1}.png")
-        return if (avatarFile.exists()) ImageIO.read(avatarFile) else setDefaultAvatar(user)
+        val avatarCount = folder.listFiles()?.size ?: return null
+        val avatarFile = File(folder, "${toString(avatarCount - 1)}.png")
+        return if (avatarFile.exists()) ImageIO.read(avatarFile) else null
     }
 }

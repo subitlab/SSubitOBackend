@@ -2,10 +2,14 @@ package cn.org.subit.route
 
 import cn.org.subit.JWTAuth.getLoginUser
 import cn.org.subit.dataClasses.Permission
+import cn.org.subit.dataClasses.authorization.authorization
 import cn.org.subit.route.basic.basic
 import cn.org.subit.route.info.info
 import cn.org.subit.route.seiue.seiue
+import cn.org.subit.route.service.service
+import cn.org.subit.route.serviceApi.serviceApi
 import cn.org.subit.route.terminal.terminal
+import cn.org.subit.route.utils.finishCall
 import cn.org.subit.utils.HttpStatus
 import cn.org.subit.utils.respond
 import io.github.smiley4.ktorswaggerui.dsl.routing.get
@@ -42,12 +46,15 @@ fun Application.router() = routing()
         intercept(ApplicationCallPipeline.Call)
         {
             val permission = getLoginUser()?.permission ?: return@intercept
-            if (permission < Permission.NORMAL) call.respond(HttpStatus.Prohibit)
+            if (permission < Permission.NORMAL) finishCall(HttpStatus.Prohibit)
         }
 
+        authorization()
         basic()
         info()
         seiue()
+        service()
+        serviceApi()
         terminal()
     }
 

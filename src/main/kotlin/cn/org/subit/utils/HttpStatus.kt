@@ -6,6 +6,7 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import kotlinx.serialization.Serializable
+import org.intellij.lang.annotations.Language
 
 /**
  * 定义了一些出现的自定义的HTTP状态码, 更多HTTP状态码请参考[io.ktor.http.HttpStatusCode]
@@ -26,7 +27,13 @@ data class HttpStatus(val code: HttpStatusCode, val message: String)
         // 用户名格式错误 400
         val UsernameFormatError = HttpStatus(HttpStatusCode.BadRequest, "用户名格式错误")
         // 操作需要登陆, 未登陆 401
-        val Unauthorized = HttpStatus(HttpStatusCode.Unauthorized, "未登录, 请先登录")
+        val NotLoggedIn = HttpStatus(HttpStatusCode.Unauthorized, "未登录, 请先登录")
+        // JWT Token 无效
+        val InvalidToken = HttpStatus(HttpStatusCode.Unauthorized, "Token无效, 请重新登录")
+        // OAuth code 无效
+        val InvalidOAuthCode = HttpStatus(HttpStatusCode.BadRequest, "授权码无效")
+        // 未授权
+        val Unauthorized = HttpStatus(HttpStatusCode.Unauthorized, "未授权")
         // 密码错误 401
         val PasswordError = HttpStatus(HttpStatusCode.Unauthorized, "账户或密码错误")
         // 无法创建用户, 邮箱已被注册 406
@@ -63,6 +70,8 @@ data class HttpStatus(val code: HttpStatusCode, val message: String)
         val SendEmailCodeTooFrequent = HttpStatus(HttpStatusCode.TooManyRequests, "发送验证码过于频繁")
         // 请求过于频繁
         val TooManyRequests = HttpStatus(HttpStatusCode.TooManyRequests, "请求过于频繁")
+        // 不接受
+        val NotAcceptable = HttpStatus(HttpStatusCode.NotAcceptable, "不接受的请求")
     }
 
     fun subStatus(message: String) = HttpStatus(code, "${this.message}: $message")
@@ -79,7 +88,7 @@ suspend inline fun ApplicationCall.respond(status: HttpStatus) =
 suspend inline fun <reified T: Any> ApplicationCall.respond(status: HttpStatus, t: T) =
     this.respond(status.code, Response(status, t))
 
-fun OpenApiResponses.statuses(vararg statuses: HttpStatus, bodyDescription: String = "错误信息") =
+fun OpenApiResponses.statuses(vararg statuses: HttpStatus, @Language("Markdown") bodyDescription: String = "错误信息") =
     statuses.forEach {
         it.message to {
             description = "code: ${it.code.value}, message: ${it.message}"
@@ -92,6 +101,7 @@ fun OpenApiResponses.statuses(vararg statuses: HttpStatus, bodyDescription: Stri
 
 inline fun <reified T: Any> OpenApiResponses.statuses(
     vararg statuses: HttpStatus,
+    @Language("Markdown")
     bodyDescription: String = "返回体",
     example: T
 ) = statuses<T>(*statuses, bodyDescription = bodyDescription, examples = listOf(example))
@@ -99,6 +109,7 @@ inline fun <reified T: Any> OpenApiResponses.statuses(
 @JvmName("statusesWithBody")
 inline fun <reified T: Any> OpenApiResponses.statuses(
     vararg statuses: HttpStatus,
+    @Language("Markdown")
     bodyDescription: String = "返回体",
     examples: List<T> = emptyList()
 )
@@ -115,3 +126,15 @@ inline fun <reified T: Any> OpenApiResponses.statuses(
         }
     }
 }
+
+fun OpenApiResponses.statuses(contentType: ContentType, vararg statuses: HttpStatus, bodyDescription: String = "返回体") =
+    statuses.forEach {
+        it.message to {
+            description = "code: ${it.code.value}, message: ${it.message}"
+            body<Response<Nothing>> {
+                description = bodyDescription
+                example("固定值", Response<Nothing>(it))
+                mediaTypes(contentType)
+            }
+        }
+    }

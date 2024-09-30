@@ -4,6 +4,8 @@ import cn.org.subit.console.AnsiStyle.Companion.RESET
 import cn.org.subit.console.SimpleAnsiColor.Companion.CYAN
 import cn.org.subit.console.SimpleAnsiColor.Companion.GREEN
 import cn.org.subit.console.SimpleAnsiColor.Companion.RED
+import cn.org.subit.dataClasses.AuthorizationId
+import cn.org.subit.dataClasses.ServiceId
 import cn.org.subit.dataClasses.UserId
 import cn.org.subit.logger.SSubitOLogger
 import cn.org.subit.utils.Power.shutdown
@@ -171,3 +173,11 @@ abstract class WarpColumnType<Base: Any, T: Any>(
 // UserId
 class UserIdColumnType: WarpColumnType<Int, UserId>(IntegerColumnType(), ::UserId, UserId::value)
 fun Table.userId(name: String) = registerColumn(name, UserIdColumnType())
+
+// ServiceId
+class ServiceIdColumnType: WarpColumnType<Int, ServiceId>(IntegerColumnType(), ::ServiceId, ServiceId::value)
+fun Table.serviceId(name: String) = registerColumn(name, ServiceIdColumnType())
+
+// AuthorizationId
+class AuthorizationIdColumnType: WarpColumnType<Long, AuthorizationId>(LongColumnType(), ::AuthorizationId, AuthorizationId::value)
+fun Table.authorizationId(name: String) = registerColumn(name, AuthorizationIdColumnType())
