@@ -19,13 +19,13 @@ fun Application.installCORS() = install(CORS)
         else runCatching { serverHost.getList() }.getOrElse { listOf(serverHost.getString()) }
 
     servers.forEach { allowHost(it, schemes = listOf("http", "https", "ws", "wss")) }
+    allowNonSimpleContentTypes = true
 
     if (debug)
     {
         anyHost()
         HttpMethod.DefaultMethods.forEach { allowMethod(it) }
         allowCredentials = true
-        allowNonSimpleContentTypes = true
         allowHeaders { true }
     }
 }
