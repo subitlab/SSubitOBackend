@@ -58,7 +58,7 @@ object JWTAuth: KoinComponent
     /**
      * 服务JWT Token有效期
      */
-     val SERVICE_TOKEN_VALIDITY: Duration = 90.days
+     val SERVICE_TOKEN_VALIDITY: Duration = 180.days
 
     /**
      * OAuth授权码有效期
@@ -163,7 +163,11 @@ object JWTAuth: KoinComponent
                 val (userInfo, lastPswChange) =
                     users.getUserWithLastPasswordChange(token.getClaim("id").asInt().toUserId()) ?: return null
                 val tokenTime = token.issuedAtAsInstant.toKotlinInstant()
-                if (lastPswChange > tokenTime) return null
+                if (lastPswChange > tokenTime)
+                {
+                    logger.config("User token issued before password change, last change time: $lastPswChange, token time: $tokenTime")
+                    return null
+                }
                 userInfo
             }
             TokenType.SERVICE ->
@@ -171,7 +175,11 @@ object JWTAuth: KoinComponent
                 val (service, revokedTime) =
                     services.getServiceWithSecretRevokedTime(token.getClaim("id").asInt().toServiceId()) ?: return null
                 val tokenTime = token.issuedAtAsInstant.toKotlinInstant()
-                if (revokedTime > tokenTime) return null
+                if (revokedTime > tokenTime)
+                {
+                    logger.config("Service token issued before service revoked, revoked time: $revokedTime, token time: $tokenTime")
+                    return null
+                }
                 service
             }
             TokenType.OAUTH_CODE ->
@@ -181,9 +189,13 @@ object JWTAuth: KoinComponent
             TokenType.OAUTH_ACCESS_TOKEN ->
             {
                 val (service, revokedTime) =
-                    services.getServiceWithSecretRevokedTime(token.getClaim("id").asInt().toServiceId()) ?: return null
+                    services.getServiceWithSecretRevokedTime(token.getClaim("service").asInt().toServiceId()) ?: return null
                 val tokenTime = token.issuedAtAsInstant.toKotlinInstant()
-                if (revokedTime > tokenTime) return null
+                if (revokedTime > tokenTime)
+                {
+                    logger.config("Access token issued before service revoked, revoked time: $revokedTime, token time: $tokenTime")
+                    return null
+                }
                 OAuthAccessTokenPrincipal(
                     token.getClaim("user").asInt().toUserId(),
                     service
@@ -192,9 +204,13 @@ object JWTAuth: KoinComponent
             TokenType.OAUTH_REFRESH_TOKEN ->
             {
                 val (service, revokedTime) =
-                    services.getServiceWithSecretRevokedTime(token.getClaim("id").asInt().toServiceId()) ?: return null
+                    services.getServiceWithSecretRevokedTime(token.getClaim("service").asInt().toServiceId()) ?: return null
                 val tokenTime = token.issuedAtAsInstant.toKotlinInstant()
-                if (revokedTime > tokenTime) return null
+                if (revokedTime > tokenTime)
+                {
+                    logger.config("Refresh token issued before service revoked, revoked time: $revokedTime, token time: $tokenTime")
+                    return null
+                }
                 OAuthRefreshTokenPrincipal(
                     token.getClaim("user").asInt().toUserId(),
                     service

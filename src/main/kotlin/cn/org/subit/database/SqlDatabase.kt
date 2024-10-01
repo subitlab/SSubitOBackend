@@ -127,10 +127,12 @@ object SqlDatabase: KoinComponent
 
             single { Database.connect(createHikariDataSource(url, driver, user, password)) }.bind<Database>()
 
-            singleOf(::Users)
-            singleOf(::Emails)
-            singleOf(::StudentIds)
+            singleOf(::Authorizations)
             singleOf(::EmailCodes)
+            singleOf(::Emails)
+            singleOf(::Services)
+            singleOf(::StudentIds)
+            singleOf(::Users)
         }
         getKoin().loadModules(listOf(module))
 
@@ -139,10 +141,12 @@ object SqlDatabase: KoinComponent
             logger.info("${CYAN}Using database implementation: ${RED}sql${CYAN}, and ${RED}lazyInit${CYAN} is ${GREEN}false.")
             logger.info("${CYAN}It may take a while to initialize the database. Please wait patiently.")
 
-            get<Users>().table
-            get<Emails>().table
-            get<StudentIds>().table
+            get<Authorizations>().table
             get<EmailCodes>().table
+            get<Emails>().table
+            get<Services>().table
+            get<StudentIds>().table
+            get<Users>().table
         }
     }
 }

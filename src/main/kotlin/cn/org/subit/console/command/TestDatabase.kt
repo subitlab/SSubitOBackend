@@ -1,9 +1,7 @@
 package cn.org.subit.console.command
 
 import cn.org.subit.console.SimpleAnsiColor.Companion.RED
-import cn.org.subit.database.Emails
-import cn.org.subit.database.StudentIds
-import cn.org.subit.database.Users
+import cn.org.subit.database.*
 import cn.org.subit.debug
 import cn.org.subit.plugin.contentnegotiation.contentNegotiationJson
 import kotlinx.serialization.InternalSerializationApi
@@ -28,9 +26,12 @@ object TestDatabase: Command, KoinComponent
     private val database: Map<String, Pair<Any, KClass<*>>> by lazy()
     {
         mapOf(
-            "Users" to dao<Users>(),
+            "Authorizations" to dao<Authorizations>(),
+            "EmailCodes" to dao<EmailCodes>(),
             "Emails" to dao<Emails>(),
-            "StudentIds" to dao<StudentIds>()
+            "Services" to dao<Services>(),
+            "StudentIds" to dao<StudentIds>(),
+            "Users" to dao<Users>(),
         )
     }
 

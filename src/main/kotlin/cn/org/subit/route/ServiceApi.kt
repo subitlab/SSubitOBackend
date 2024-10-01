@@ -26,7 +26,6 @@ import io.ktor.server.auth.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.seconds
 
 fun Route.serviceApi() = route("/serviceApi", {
@@ -49,10 +48,10 @@ fun Route.serviceApi() = route("/serviceApi", {
 
     route("/oauth")
     {
-        authenticate("ssubito-oauth-code", optional = true)
+        authenticate("ssubito-oauth-code", "ssubito-auth", strategy = AuthenticationStrategy.Required)
         {
             get("/accessToken", {
-                securitySchemeNames("Authorization", "OAuth-Code")
+                securitySchemeNames("Authorization", "Oauth-Code")
                 description = """
                     按照OAuth授权码授权流程获取访问令牌, 该接口需要在Authorization中添加服务token以及在OAuth-Code中添加授权码.
                     
@@ -164,16 +163,21 @@ fun Route.serviceApi() = route("/serviceApi", {
         }
     }) { getAccessToken() }
 
-    get("/userinfo", {
-        summary = "通过access token获取用户信息"
-        description = "通过access token获取用户信息, 该接口需要在Authorization中添加access token. 若无权查看改用户的任何信息视为该用户不存在"
+    get("/info", {
+        summary = "通过access token获取用户和服务信息"
+        description = """
+            通过access token获取用户和服务信息, 该接口需要在Authorization中添加access token.
+            
+            当用户不存在时返回404. 当当前服务无权获得该用户的任何信息时, 返回200, 但user为null.
+        """.trimIndent()
         response {
-            statuses<UserFull>(HttpStatus.OK.subStatus("获取全部用户信息"), example = UserFull.example)
-            statuses<BasicUserInfo>(HttpStatus.OK.subStatus("获取基本用户信息"), example = BasicUserInfo.example)
+            statuses<Information<UserFull>>(HttpStatus.OK.subStatus("获取全部用户信息"), example = Information(UserFull.example, BasicServiceInfo.example))
+            statuses<Information<BasicUserInfo>>(HttpStatus.OK.subStatus("获取基本用户信息"), example = Information(BasicUserInfo.example, BasicServiceInfo.example))
+            statuses<Information<Nothing?>>(HttpStatus.OK.subStatus("无权获得用户信息"), example = Information(null, BasicServiceInfo.example))
             statuses(HttpStatus.NotFound)
             statuses(HttpStatus.InvalidToken)
         }
-    }) { getUserInfo() }
+    }) { getInfo() }
 }
 
 @Serializable

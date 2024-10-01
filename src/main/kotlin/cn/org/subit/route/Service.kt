@@ -195,8 +195,8 @@ private suspend fun Context.createService(): Nothing
     val data = call.receive<CreateData>()
     val user = getLoginUser() ?: finishCall(HttpStatus.NotLoggedIn)
     val services = get<Services>()
-    services.createService(data.name, data.description, user.id)
-    finishCall(HttpStatus.OK)
+    val id = services.createService(data.name, data.description, user.id)
+    finishCall(HttpStatus.OK, id)
 }
 
 private suspend fun Context.setAvatar(): Nothing

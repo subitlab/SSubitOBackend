@@ -20,12 +20,12 @@ fun Application.installCORS() = install(CORS)
 
     servers.forEach { allowHost(it, schemes = listOf("http", "https", "ws", "wss")) }
     allowNonSimpleContentTypes = true
+    HttpMethod.DefaultMethods.forEach { allowMethod(it) }
+    allowCredentials = true
+    allowHeaders { true }
 
     if (debug)
     {
         anyHost()
-        HttpMethod.DefaultMethods.forEach { allowMethod(it) }
-        allowCredentials = true
-        allowHeaders { true }
     }
 }

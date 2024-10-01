@@ -49,7 +49,11 @@ fun Application.installAuthentication() = install(Authentication)
 
     jwt("ssubito-oauth-code")
     {
-        authHeader { it.request.header("Oauth-Code")?.let(::parseAuthorizationHeader) }
+        authHeader {
+            val res = it.request.header("Oauth-Code")?.let(::parseAuthorizationHeader)
+            logger.config("ssubito-oauth-code token: $res")
+            res
+        }
         verifier(JWTAuth.makeJwtVerifier()) // 设置验证器
         validate()
         {

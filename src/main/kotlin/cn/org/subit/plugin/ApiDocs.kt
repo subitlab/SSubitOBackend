@@ -63,7 +63,11 @@ fun Application.installApiDoc() = install(SwaggerUI)
             name = "Authorization"
             scheme = AuthScheme.BEARER
             location = AuthKeyLocation.HEADER
-            description = "用户Token/服务Token/access token/refresh token"
+            description = """
+                用户Token/服务Token/access token/refresh token.
+                
+                在该api文档中直接填写token会自动加上Bearer前缀, 但在实际请求中需要以 Bearer token 的形式填写
+            """.trimIndent()
             bearerFormat = "Bearer <token>"
             type = AuthType.HTTP
         }
@@ -72,8 +76,8 @@ fun Application.installApiDoc() = install(SwaggerUI)
             name = "Oauth-Code"
             scheme = AuthScheme.BEARER
             location = AuthKeyLocation.HEADER
-            description = "OAuth Code"
-            bearerFormat = "Bearer <code>"
+            description = "OAuth Code, 以 Bearer code 的形式填写"
+            bearerFormat = "Bearer code"
             type = AuthType.API_KEY
         }
         defaultSecuritySchemeNames("Authorization")
