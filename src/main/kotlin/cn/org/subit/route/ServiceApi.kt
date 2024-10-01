@@ -243,7 +243,13 @@ private fun Context.refreshAccessToken(): Nothing
     finishCall(HttpStatus.OK, AccessToken(accessToken.token, "Bearer", time.inWholeSeconds))
 }
 
-private suspend fun Context.getUserInfo()
+@Serializable
+data class Information<User>(
+    val user: User,
+    val service: BasicServiceInfo,
+)
+
+private suspend fun Context.getInfo()
 {
     val token = getOAuthAccessToken() ?: finishCall(HttpStatus.InvalidToken)
     val auth = get<Authorizations>().getAuthorization(token.user, token.service.id)
@@ -253,10 +259,18 @@ private suspend fun Context.getUserInfo()
         false -> token.service.cancelAuthorization
         null -> token.service.unauthorized
     }
-    when (permission)
+    @Suppress("IMPLICIT_CAST_TO_ANY")
+    val user = when (permission)
     {
-        ServicePermission.NONE -> finishCall(HttpStatus.NotFound)
-        ServicePermission.BASIC -> get<Users>().getUser(token.user)?.toUserFull()?.toBasicUserInfo()?.let { finishCall(HttpStatus.OK, it) } ?: finishCall(HttpStatus.NotFound)
-        ServicePermission.ALL -> get<Users>().getUser(token.user)?.toUserFull()?.let { finishCall(HttpStatus.OK, it) } ?: finishCall(HttpStatus.NotFound)
+        ServicePermission.NONE -> null
+        ServicePermission.BASIC -> get<Users>().getUser(token.user)?.toUserFull()?.toBasicUserInfo() ?: finishCall(HttpStatus.NotFound)
+        ServicePermission.ALL -> get<Users>().getUser(token.user)?.toUserFull() ?: finishCall(HttpStatus.NotFound)
+    }
+
+    when (user)
+    {
+        is BasicUserInfo -> finishCall(HttpStatus.OK.subStatus("获取基本用户信息"), Information(user, token.service.toBasicServiceInfo()))
+        is UserFull -> finishCall(HttpStatus.OK.subStatus("获取全部用户信息"), Information(user, token.service.toBasicServiceInfo()))
+        else -> finishCall(HttpStatus.OK.subStatus("无权获得用户信息"), Information(null, token.service.toBasicServiceInfo()))
     }
 }

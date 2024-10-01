@@ -32,6 +32,7 @@ repositories {
 }
 
 dependencies {
+    // ktor server
     implementation(kotlin("reflect")) // kotlin 反射库
     implementation("io.ktor:ktor-server-core-jvm") // core
     implementation("io.ktor:ktor-server-netty-jvm") // netty
@@ -42,7 +43,20 @@ dependencies {
     implementation("io.ktor:ktor-server-swagger")
     implementation("io.ktor:ktor-server-cors-jvm") // 跨域
     implementation("io.ktor:ktor-server-rate-limit-jvm") // 限流
-    implementation("io.ktor:ktor-server-websockets")
+    implementation("io.ktor:ktor-server-websockets") // websocket
+    implementation("io.ktor:ktor-server-auto-head-response-jvm") // 自动响应HEAD请求
+    implementation("io.ktor:ktor-server-double-receive-jvm") // 重复接收
+    implementation("io.ktor:ktor-server-call-logging-jvm") // 日志
+
+    // ktor client
+    implementation("io.ktor:ktor-client-core-jvm") // core
+    implementation("io.ktor:ktor-client-java")
+    implementation("io.ktor:ktor-client-content-negotiation") // request/response时反序列化
+
+    // ktor common
+    implementation("io.ktor:ktor-serialization-kotlinx-json-jvm") // json on request/response
+
+    // utils
     implementation("io.github.smiley4:ktor-swagger-ui:$swagger_ui_version") // 创建api页面
     implementation("io.github.smiley4:schema-kenerator-core:$schema_kenerator")
     implementation("io.github.smiley4:schema-kenerator-reflection:$schema_kenerator")
@@ -50,14 +64,10 @@ dependencies {
     implementation("io.swagger.parser.v3:swagger-parser:2.1.22")
     implementation("com.sun.mail:javax.mail:1.6.2") // 邮件发送
     implementation("ch.qos.logback:logback-classic:$logback_version") // 日志
-    implementation("io.ktor:ktor-server-call-logging-jvm") // 日志
-    implementation("io.ktor:ktor-serialization-kotlinx-json-jvm") // json on request/response
     implementation("net.mamoe.yamlkt:yamlkt:0.13.0") // yaml for kotlin on read/write file
     implementation("io.ktor:ktor-server-config-yaml-jvm") // yaml on read application.yaml
     implementation("org.fusesource.jansi:jansi:2.4.1") // 终端颜色码
     implementation("org.jline:jline:$jline_version") // 终端打印、命令等
-    implementation("io.ktor:ktor-server-auto-head-response-jvm") // 自动响应HEAD请求
-    implementation("io.ktor:ktor-server-double-receive-jvm") // 重复接收
 
     //postgresql
     val pg_version: String by project
@@ -87,7 +97,6 @@ dependencies {
 
     testImplementation("io.ktor:ktor-server-tests-jvm")
     testImplementation("io.ktor:ktor-server-test-host")
-    testImplementation("io.ktor:ktor-client-content-negotiation")
     testImplementation("io.ktor:ktor-server-test-host-jvm")
     testImplementation(kotlin("test"))
     testImplementation(kotlin("test-junit"))

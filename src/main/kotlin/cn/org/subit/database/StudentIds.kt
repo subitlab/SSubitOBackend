@@ -3,6 +3,8 @@ package cn.org.subit.database
 import cn.org.subit.dataClasses.UserFull
 import cn.org.subit.dataClasses.UserId
 import cn.org.subit.database.utils.singleOrNull
+import cn.org.subit.plugin.contentnegotiation.dataJson
+import kotlinx.serialization.encodeToString
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
@@ -32,7 +34,7 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
                 UserFull.Seiue(
                     studentId = row[studentId].value,
                     realName = row[realName],
-                    archived = row[archived]
+                    archived = row[archived],
                 )
             }
     }
@@ -42,14 +44,14 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
         select(user).where { table.studentId eq studentId }.singleOrNull()?.get(user)?.value
     }
 
-    suspend fun addStudentId(userId: UserId, studentId: String, realName: String, archived: Boolean, seiue: String) = query()
+    suspend inline fun <reified T> addStudentId(userId: UserId, studentId: String, realName: String, archived: Boolean, seiue: T) = query()
     {
         insert {
             it[user] = userId
             it[this.studentId] = studentId
             it[this.realName] = realName
-            it[rawData] = seiue
             it[this.archived] = archived
+            it[rawData] = dataJson.encodeToString<T>(seiue)
         }
     }
 

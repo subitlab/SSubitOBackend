@@ -6,7 +6,7 @@ import cn.org.subit.JWTAuth.getLoginUser
 import cn.org.subit.config.systemConfig
 import cn.org.subit.dataClasses.UserId
 import cn.org.subit.database.StudentIds
-import cn.org.subit.plugin.contentnegotiation.dataJson
+import cn.org.subit.plugin.contentnegotiation.contentNegotiationJson
 import cn.org.subit.route.utils.Context
 import cn.org.subit.route.utils.finishCall
 import cn.org.subit.route.utils.finishCallWithRedirect
@@ -18,13 +18,28 @@ import io.github.smiley4.ktorswaggerui.dsl.routing.delete
 import io.github.smiley4.ktorswaggerui.dsl.routing.get
 import io.github.smiley4.ktorswaggerui.dsl.routing.post
 import io.github.smiley4.ktorswaggerui.dsl.routing.route
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.engine.java.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.request.*
+import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.routing.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
-import java.net.HttpURLConnection
-import java.net.URL
+
+private val httpClient = HttpClient(Java)
+{
+    engine()
+    {
+        pipelining = true
+        protocolVersion = java.net.http.HttpClient.Version.HTTP_2
+    }
+    install(ContentNegotiation)
+    {
+        json(contentNegotiationJson)
+    }
+}
 
 fun Route.seiue() = route("/seiue", {
     tags = listOf("Seiue")
@@ -112,22 +127,17 @@ private val addBindLocks = Locks<String>()
 private suspend fun Context.postBind()
 {
     val loginUser = getLoginUser() ?: finishCall(HttpStatus.NotLoggedIn)
-    val token = call.request.queryParameters["access_token"]
+    val token = call.request.queryParameters["access_token"] ?: finishCall(HttpStatus.BadRequest.subStatus("access_token 为空"))
     val activeReflectionId =
         call.request.queryParameters["active_reflection_id"]?.toLongOrNull() ?: finishCall(HttpStatus.BadRequest)
 
-    val result = withContext(Dispatchers.IO)
-                 {
-                     @Suppress("DEPRECATION")
-                     val url = URL("https://open.seiue.com/api/v3/oauth/me")
-                     val connection = url.openConnection() as HttpURLConnection
-                     connection.setRequestProperty("Authorization", "Bearer $token")
-                     connection.setRequestProperty("X-Reflection-Id", activeReflectionId.toString())
-                     connection.requestMethod = "GET"
-                     runCatching { connection.inputStream.bufferedReader().readText() }.getOrNull()
-                 } ?: finishCall(HttpStatus.BadRequest.copy(message = "seiue token 无效"))
+    val response = httpClient.get("https://open.seiue.com/api/v3/oauth/me")
+    {
+        bearerAuth(token)
+        header("X-Reflection-Id", activeReflectionId)
+    }
 
-    val seiue = dataJson.decodeFromString(Seiue.serializer(), result)
+    val seiue = runCatching { response.body<Seiue>() }.getOrNull() ?: finishCall(HttpStatus.BadRequest.copy(message = "seiue token 无效"))
     if (seiue.usin == null) finishCall(HttpStatus.BadRequest.copy(message = "seiue token 无效(学号为空)"))
     val studentIds = get<StudentIds>()
 
@@ -140,7 +150,7 @@ private suspend fun Context.postBind()
             finishCall(HttpStatus.EmailExist.copy(message = "学号已存在"))
         else
         {
-            studentIds.addStudentId(loginUser.id, seiue.usin, seiue.name, !seiue.status.equals("normal", true), result)
+            studentIds.addStudentId(loginUser.id, seiue.usin, seiue.name, !seiue.status.equals("normal", true), seiue)
             finishCall(HttpStatus.OK, "学号添加成功")
         }
     }
