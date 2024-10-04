@@ -1,8 +1,5 @@
-// 取消命名不合法警告
 @file:Suppress("PropertyName", "LocalVariableName")
 
-val ktor_version: String by project
-val kotlin_version: String by project
 val logback_version: String by project
 val exposed_version: String by project
 val hikaricp_version: String by project
@@ -12,9 +9,9 @@ val swagger_ui_version: String by project
 val schema_kenerator: String by project
 
 plugins {
-    kotlin("jvm") version "2.0.10"
-    kotlin("plugin.serialization") version "2.0.10"
-    id("io.ktor.plugin") version "2.3.11"
+    kotlin("jvm") version "2.0.20"
+    kotlin("plugin.serialization") version "2.0.20"
+    id("io.ktor.plugin") version "2.3.12"
 }
 
 group = "cn.org.subit"
@@ -68,10 +65,9 @@ dependencies {
     implementation("io.ktor:ktor-server-config-yaml-jvm") // yaml on read application.yaml
     implementation("org.fusesource.jansi:jansi:2.4.1") // 终端颜色码
     implementation("org.jline:jline:$jline_version") // 终端打印、命令等
+    implementation("at.favre.lib:bcrypt:0.10.2") // bcrypt 单向加密
 
     //postgresql
-    val pg_version: String by project
-    implementation("com.impossibl.pgjdbc-ng:pgjdbc-ng:$pg_version")
     val postgresql_version: String by project
     implementation("org.postgresql:postgresql:$postgresql_version")
 
@@ -89,8 +85,6 @@ dependencies {
     implementation("io.insert-koin:koin-core")
     implementation("io.insert-koin:koin-ktor")
     implementation("io.insert-koin:koin-logger-slf4j")
-    // 密码加密算法
-    implementation("at.favre.lib:bcrypt:0.10.2")
 
     implementation("me.nullaqua:BluestarAPI-kotlin-reflect:4.1.0")
 
@@ -118,6 +112,6 @@ kotlin {
 ktor {
     fatJar {
         allowZip64 = true
-        archiveFileName = "SSubitO-${version}-all.jar"
+        archiveFileName = "SSubitO.jar"
     }
 }

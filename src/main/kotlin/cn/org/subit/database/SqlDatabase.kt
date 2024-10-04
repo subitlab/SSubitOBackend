@@ -56,7 +56,9 @@ object SqlDatabase: KoinComponent
      */
     private lateinit var config: ApplicationConfig
     private val logger = SSubitOLogger.getLogger()
-    private val drivers:List<Driver> = listOf(com.impossibl.postgres.jdbc.PGDriver())
+    private val drivers:List<Driver> = listOf(
+        org.postgresql.Driver(),
+    )
 
     /**
      * 创建Hikari数据源,即数据库连接池
