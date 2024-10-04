@@ -5,9 +5,7 @@ package cn.org.subit.dataClasses
 import cn.org.subit.database.Emails
 import cn.org.subit.database.StudentIds
 import cn.org.subit.database.Users
-import io.ktor.server.auth.*
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -38,7 +36,6 @@ data class UserInfo(
             phone,
             email,
             seiue,
-            seiue.associate { it.studentId to it.realName }
         )
 
     companion object: KoinComponent
@@ -63,8 +60,6 @@ data class UserFull(
     val phone: String,
     val email: List<String>,
     val seiue: List<Seiue>,
-    @Deprecated("Use seiue instead", ReplaceWith("seiue"))
-    val studentId: Map<String, String>,
 )
 {
     @Serializable
@@ -84,8 +79,7 @@ data class UserFull(
             email = listOf("email1@example.com", "email2@example.com", "email3@example.com"),
             phone = "12345678901",
             username = "username",
-            seiue = listOf(UserFull.Seiue("studentId", "realName", false)),
-            studentId = mapOf("studentId" to "realName"),
+            seiue = listOf(Seiue("studentId", "realName", false)),
             permission = Permission.NORMAL,
             registrationTime = System.currentTimeMillis()
         )
