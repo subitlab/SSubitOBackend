@@ -56,13 +56,13 @@ class Services: SqlDao<Services.ServiceTable>(ServiceTable)
         name: String,
         description: String,
         owner: UserId,
-    ): ServiceId = query()
+    ): ServiceId? = query()
     {
-        insertAndGetId {
+        insertIgnoreAndGetId {
             it[ServiceTable.name] = name
             it[ServiceTable.description] = description
             it[ServiceTable.owner] = owner
-        }.value
+        }?.value
     }
 
     suspend fun getService(id: ServiceId): ServiceInfo? = query()
@@ -116,8 +116,16 @@ class Services: SqlDao<Services.ServiceTable>(ServiceTable)
             .map(::deserialize)
     }
 
-    suspend fun updateService(service: ServiceInfo) = query()
+    /**
+     * 当修改的服务名称和其他服务重复时返回false
+     */
+    suspend fun updateService(service: ServiceInfo): Boolean = query()
     {
+        val ids = select(id).where { name eq service.name }.map { it[id].value }
+        if (ids.size > 1 || ids.size == 1 && ids[0] != service.id)
+        {
+            return@query false
+        }
         update(where = { id eq service.id })
         {
             it[name] = service.name
@@ -132,5 +140,6 @@ class Services: SqlDao<Services.ServiceTable>(ServiceTable)
             it[pendingAuthorized] = service.pendingAuthorized
             it[pendingCancelAuthorization] = service.pendingCancelAuthorization
         }
+        return@query true
     }
 }

@@ -41,6 +41,7 @@ fun Route.service() = route("/service", {
         }
         response {
             statuses<ServiceId>(HttpStatus.OK, example = ServiceId(1))
+            statuses(HttpStatus.Conflict.subStatus("服务名称重复"))
         }
     }) { createService() }
 
@@ -146,7 +147,7 @@ fun Route.service() = route("/service", {
                 }
             }
             response {
-                statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.NotFound)
+                statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.NotFound, HttpStatus.Conflict.subStatus("服务名称重复"))
             }
         }) { updateService() }
     }
@@ -196,7 +197,8 @@ private suspend fun Context.createService(): Nothing
     val user = getLoginUser() ?: finishCall(HttpStatus.NotLoggedIn)
     val services = get<Services>()
     val id = services.createService(data.name, data.description, user.id)
-    finishCall(HttpStatus.OK, id)
+    if (id != null) finishCall(HttpStatus.OK, id)
+    else finishCall(HttpStatus.Conflict.subStatus("服务名称重复"))
 }
 
 private suspend fun Context.setAvatar(): Nothing
@@ -285,7 +287,7 @@ private suspend fun Context.updateService(): Nothing
 
     if (user.hasAdmin)
     {
-        services.updateService(
+        val res = services.updateService(
             service.copy(
                 name = data.name,
                 description = data.description,
@@ -300,6 +302,7 @@ private suspend fun Context.updateService(): Nothing
                 pendingCancelAuthorization = null,
             )
         )
+        if (!res) finishCall(HttpStatus.Conflict.subStatus("服务名称重复"))
     }
     else if (
         data.name == service.name &&
@@ -321,7 +324,7 @@ private suspend fun Context.updateService(): Nothing
     }
     else
     {
-        services.updateService(
+        val res = services.updateService(
             service.copy(
                 pendingName = data.name,
                 pendingDescription = data.description,
@@ -330,6 +333,7 @@ private suspend fun Context.updateService(): Nothing
                 pendingCancelAuthorization = data.cancelAuthorization,
             )
         )
+        if (!res) finishCall(HttpStatus.Conflict.subStatus("服务名称重复"))
     }
     finishCall(HttpStatus.OK)
 }
