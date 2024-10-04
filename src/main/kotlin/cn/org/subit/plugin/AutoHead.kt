@@ -1,6 +1,6 @@
 @file:Suppress("PackageDirectoryMismatch")
 
-package cn.org.subit.plugin.autohead
+package cn.org.subit.plugin.autoHead
 
 import io.ktor.server.application.*
 import io.ktor.server.plugins.autohead.*

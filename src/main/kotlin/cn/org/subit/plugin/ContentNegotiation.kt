@@ -1,6 +1,6 @@
 @file:Suppress("PackageDirectoryMismatch")
 
-package cn.org.subit.plugin.contentnegotiation
+package cn.org.subit.plugin.contentNegotiation
 
 import cn.org.subit.debug
 import io.ktor.serialization.kotlinx.json.*

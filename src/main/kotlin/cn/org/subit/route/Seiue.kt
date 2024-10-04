@@ -6,7 +6,7 @@ import cn.org.subit.JWTAuth.getLoginUser
 import cn.org.subit.config.systemConfig
 import cn.org.subit.dataClasses.UserId
 import cn.org.subit.database.StudentIds
-import cn.org.subit.plugin.contentnegotiation.contentNegotiationJson
+import cn.org.subit.plugin.contentNegotiation.contentNegotiationJson
 import cn.org.subit.route.utils.Context
 import cn.org.subit.route.utils.finishCall
 import cn.org.subit.route.utils.finishCallWithRedirect

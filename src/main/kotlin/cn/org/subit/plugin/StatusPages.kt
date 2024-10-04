@@ -1,6 +1,6 @@
 @file:Suppress("PackageDirectoryMismatch")
 
-package cn.org.subit.plugin.statuspages
+package cn.org.subit.plugin.statusPages
 
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -12,7 +12,6 @@ import cn.org.subit.plugin.rateLimit.RateLimit
 import cn.org.subit.route.utils.CallFinish
 import cn.org.subit.utils.HttpStatus
 import cn.org.subit.utils.respond
-import io.ktor.server.response.*
 import kotlin.time.Duration.Companion.seconds
 
 private fun ApplicationCall.hasResponseBody() =

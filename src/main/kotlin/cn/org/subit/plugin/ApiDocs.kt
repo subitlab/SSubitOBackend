@@ -1,8 +1,8 @@
 @file:Suppress("PackageDirectoryMismatch")
 
-package cn.org.subit.plugin.apidocs
+package cn.org.subit.plugin.apiDocs
 
-import cn.org.subit.plugin.contentnegotiation.showJson
+import cn.org.subit.plugin.contentNegotiation.showJson
 import io.github.smiley4.ktorswaggerui.SwaggerUI
 import io.github.smiley4.ktorswaggerui.data.AuthKeyLocation
 import io.github.smiley4.ktorswaggerui.data.AuthScheme

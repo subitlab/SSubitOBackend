@@ -4,7 +4,7 @@ import cn.org.subit.Loader
 import cn.org.subit.config.emailConfig
 import cn.org.subit.database.EmailCodes
 import cn.org.subit.logger.SSubitOLogger
-import cn.org.subit.plugin.contentnegotiation.contentNegotiationJson
+import cn.org.subit.plugin.contentNegotiation.contentNegotiationJson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async

@@ -1,8 +1,8 @@
 @file:Suppress("PackageDirectoryMismatch")
 
-package cn.org.subit.plugin.websockets
+package cn.org.subit.plugin.webSockets
 
-import cn.org.subit.plugin.contentnegotiation.contentNegotiationJson
+import cn.org.subit.plugin.contentNegotiation.contentNegotiationJson
 import io.ktor.serialization.kotlinx.*
 import io.ktor.server.application.*
 import io.ktor.server.websocket.*
