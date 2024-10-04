@@ -64,7 +64,7 @@ fun Route.seiue() = route("/seiue", {
             queryParameter<Long>("active_reflection_id")
         }
         response {
-            statuses(HttpStatus.OK, HttpStatus.EmailExist.copy(message = "学号已存在"), HttpStatus.BadRequest)
+            statuses(HttpStatus.OK, HttpStatus.EmailExist.copy(message = "学号已绑定其他账号"), HttpStatus.BadRequest)
         }
     }) { postBind() }
 
@@ -147,7 +147,7 @@ private suspend fun Context.postBind()
     addBindLocks.withLock<Nothing>(seiue.usin)
     {
         if (studentIds.getStudentIdUsers(seiue.usin) != null)
-            finishCall(HttpStatus.EmailExist.copy(message = "学号已存在"))
+            finishCall(HttpStatus.EmailExist.copy(message = "学号已绑定其他账号"))
         else
         {
             studentIds.addStudentId(loginUser.id, seiue.usin, seiue.name, !seiue.status.equals("normal", true), seiue)
