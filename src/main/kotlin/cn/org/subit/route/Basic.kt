@@ -224,7 +224,7 @@ private suspend fun Context.login()
 {
     val users = get<Users>()
     val loginInfo = call.receive<Login>()
-    val checked = if (loginInfo.id != null && users.checkLogin(loginInfo.id, loginInfo.password)) loginInfo.id
+    val checked = if (loginInfo.id != null) loginInfo.id.takeIf { users.checkLogin(loginInfo.id, loginInfo.password) }
     else if (loginInfo.email != null) users.checkLogin(loginInfo.email, loginInfo.password)
     else finishCall(HttpStatus.BadRequest)
     // 若登陆失败，返回错误信息
