@@ -3,7 +3,7 @@ package cn.org.subit.console.command
 import cn.org.subit.console.SimpleAnsiColor.Companion.RED
 import cn.org.subit.database.*
 import cn.org.subit.debug
-import cn.org.subit.plugin.contentnegotiation.contentNegotiationJson
+import cn.org.subit.plugin.contentNegotiation.contentNegotiationJson
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.serializer
 import org.jline.reader.Candidate
@@ -21,6 +21,7 @@ object TestDatabase: Command, KoinComponent
     override val description: String = "Call the database interface. ${RED.bright()}This command is for debugging only."
     override val args: String = "<table> <method> [args]..."
     override val aliases: List<String> = listOf("database", "db")
+    override val log: Boolean get() = debug
 
     private inline fun <reified T: Any> dao() = get<T>() to T::class
     private val database: Map<String, Pair<Any, KClass<*>>> by lazy()
