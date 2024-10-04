@@ -5,7 +5,6 @@ import cn.org.subit.dataClasses.Slice
 import cn.org.subit.database.utils.asSlice
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.kotlin.datetime.CurrentTimestampWithTimeZone
 import org.jetbrains.exposed.sql.kotlin.datetime.timestampWithTimeZone
 
@@ -25,16 +24,18 @@ class Authorizations: SqlDao<Authorizations.AuthorizationTable>(AuthorizationTab
         id = row[AuthorizationTable.id].value,
         user = row[AuthorizationTable.user].value,
         service = row[AuthorizationTable.service].value,
-        grantedAt = row[AuthorizationTable.grantedAt].toEpochSecond(),
+        grantedAt = row[AuthorizationTable.grantedAt].toInstant().toEpochMilli(),
         cancel = row[AuthorizationTable.cancel],
     )
 
     suspend fun grantAuthorization(user: UserId, service: ServiceId): AuthorizationId = query()
     {
         val x =
-            updateReturning(listOf(id), where = { (AuthorizationTable.user eq user) and (AuthorizationTable.service eq service) }) { it[cancel] = false }
-                .map { it[id].value }
-                .singleOrNull()
+            updateReturning(listOf(id), where = { (AuthorizationTable.user eq user) and (AuthorizationTable.service eq service) })
+            {
+                it[cancel] = false
+                it[grantedAt] = CurrentTimestampWithTimeZone
+            }.map { it[id].value }.singleOrNull()
         if (x != null) return@query x
 
         insertAndGetId {
