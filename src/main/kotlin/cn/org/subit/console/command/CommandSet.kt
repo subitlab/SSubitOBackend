@@ -40,7 +40,7 @@ object CommandSet: TreeCommand(
     /**
      * 命令提示符, 上一次成功为青色, 失败为红色
      */
-    private val prompt: String get() = parsePrompt("FORUM > ")
+    private val prompt: String get() = parsePrompt("SSO > ")
     private val rightPrompt: String get() = parsePrompt("<| POWERED BY SUBIT |>")
 
     fun Application.startCommandThread() = CoroutineScope(Dispatchers.IO).launch()

@@ -31,8 +31,7 @@ fun Application.installStatusPages() = install(StatusPages)
     exception<BadRequestException> { call, _ -> call.respond(HttpStatus.BadRequest) }
     exception<Throwable>
     { call, throwable ->
-        SSubitOLogger.getLogger("ForumBackend.installStatusPages")
-            .warning("出现位置错误, 访问接口: ${call.request.path()}", throwable)
+        logger.warning("出现位置错误, 访问接口: ${call.request.path()}", throwable)
         call.respond(HttpStatus.InternalServerError)
     }
 

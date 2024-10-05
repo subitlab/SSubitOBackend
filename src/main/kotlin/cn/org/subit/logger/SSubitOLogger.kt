@@ -11,8 +11,10 @@ import cn.org.subit.workDir
 import kotlinx.datetime.Clock
 import kotlinx.datetime.toKotlinInstant
 import me.nullaqua.api.reflect.CallerSensitive
-import me.nullaqua.kotlin.reflect.getCallerClass
-import me.nullaqua.kotlin.reflect.getCallerClasses
+import me.nullaqua.api.kotlin.reflect.KallerSensitive
+import me.nullaqua.api.kotlin.reflect.getCallerClass
+import me.nullaqua.api.kotlin.reflect.getCallerClasses
+import me.nullaqua.api.kotlin.utils.LoggerUtil
 import java.io.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -31,26 +33,23 @@ import kotlin.time.Duration
 @Suppress("MemberVisibilityCanBePrivate")
 object SSubitOLogger
 {
-    val globalLogger = LoggerUtils(Logger.getLogger(""))
-    fun getLogger(name: String): LoggerUtils = LoggerUtils(Logger.getLogger(name))
-    fun getLogger(clazz: KClass<*>): LoggerUtils
+    val globalLogger = LoggerUtil(Logger.getLogger(""))
+    fun getLogger(name: String): LoggerUtil = LoggerUtil(Logger.getLogger(name))
+    fun getLogger(clazz: Class<*>): LoggerUtil
     {
-        val c: KClass<*> = when
-        {
-            clazz.isCompanion -> clazz.java.enclosingClass.kotlin
-            else              -> clazz
-        }
-        val name = c.qualifiedName ?: c.jvmName
+        var c = clazz
+        while (c.declaringClass != null) c = c.declaringClass
+        val name = c.kotlin.qualifiedName ?: c.kotlin.jvmName
         return getLogger(name)
     }
-
-    fun getLogger(clazz: Class<*>): LoggerUtils = getLogger(clazz.kotlin)
+    fun getLogger(clazz: KClass<*>): LoggerUtil = getLogger(clazz.java)
 
     @JvmName("getLoggerInline")
-    inline fun <reified T> getLogger(): LoggerUtils = getLogger(T::class)
+    inline fun <reified T> getLogger(): LoggerUtil = getLogger(T::class)
 
     @CallerSensitive
-    fun getLogger(): LoggerUtils = getCallerClass()?.let(SSubitOLogger::getLogger) ?: globalLogger
+    @OptIn(KallerSensitive::class)
+    fun getLogger(): LoggerUtil = getCallerClass()?.let(SSubitOLogger::getLogger) ?: globalLogger
     internal val nativeOut: PrintStream = System.out
     internal val nativeErr: PrintStream = System.err
 
@@ -125,6 +124,7 @@ object SSubitOLogger
         val arrayOutputStream = ByteArrayOutputStream()
 
         @CallerSensitive
+        @OptIn(KallerSensitive::class)
         override fun write(b: Int) = safe()
         {
             if (b == '\n'.code)

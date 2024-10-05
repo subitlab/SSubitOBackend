@@ -37,7 +37,7 @@ var emailConfig: EmailConfig by config(
         sender = "example@email.server.com",
         password = "your_email_password",
         codeValidTime = 600,
-        verifyEmailTitle = "论坛验证码",
+        verifyEmailTitle = "SSubitO验证码",
         emailFormat = ".*@.*\\..*",
         enableWhiteList = false
     )

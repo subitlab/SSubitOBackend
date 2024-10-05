@@ -24,7 +24,7 @@ fun Application.installAuthentication() = install(Authentication)
     val logger = SSubitOLogger.getLogger()
     // 初始化jwt验证
     this@installAuthentication.initJwtAuth()
-    // jwt验证, 这个验证是用于论坛正常的用户登陆
+    // jwt验证, 这个验证是用于正常的用户登陆
     jwt("ssubito-auth")
     {
         authHeader {
