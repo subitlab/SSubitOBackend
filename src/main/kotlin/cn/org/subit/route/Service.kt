@@ -8,6 +8,7 @@ import cn.org.subit.dataClasses.*
 import cn.org.subit.dataClasses.ServiceId.Companion.toServiceIdOrNull
 import cn.org.subit.dataClasses.UserId.Companion.toUserIdOrNull
 import cn.org.subit.database.Services
+import cn.org.subit.logger.SSubitOLogger
 import cn.org.subit.route.utils.*
 import cn.org.subit.utils.FileUtils
 import cn.org.subit.utils.HttpStatus
@@ -21,10 +22,14 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
 
+private val logger = SSubitOLogger.getLogger()
 fun Route.service() = route("/service", {
     tags("服务")
 })
@@ -207,7 +212,17 @@ private suspend fun Context.setAvatar(): Nothing
     val id = call.parameters["id"]?.toServiceIdOrNull() ?: finishCall(HttpStatus.BadRequest)
     val service = get<Services>().getService(id) ?: finishCall(HttpStatus.NotFound.subStatus("服务不存在"))
     if (service.owner != user.id && !user.hasAdmin) finishCall(HttpStatus.Forbidden.subStatus("仅管理员或服务所有者可以设置头像"))
-    FileUtils.setAvatar(service.id, call.receive())
+    suspend fun getImage(): BufferedImage
+    {
+        return runCatching()
+               {
+                   withContext(Dispatchers.IO)
+                   {
+                       ImageIO.read(call.receiveStream())
+                   }
+               }.onFailure { logger.fine("接收头像失败", it) }.getOrNull() ?: finishCall(HttpStatus.UnsupportedMediaType)
+    }
+    FileUtils.setAvatar(service.id, getImage())
     finishCall(HttpStatus.OK)
 }
 

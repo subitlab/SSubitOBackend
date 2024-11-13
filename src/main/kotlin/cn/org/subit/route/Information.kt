@@ -177,7 +177,7 @@ private suspend fun Context.changeAvatar(): Nothing
             {
                 ImageIO.read(call.receiveStream())
             }
-        }.getOrNull() ?: finishCall(HttpStatus.UnsupportedMediaType)
+        }.onFailure { logger.fine("接收头像失败", it) }.getOrNull() ?: finishCall(HttpStatus.UnsupportedMediaType)
     }
     logger.config("user=${loginUser} change avatar id=$id")
     if (id == UserId(0) && loginUser.permission >= Permission.NORMAL)
