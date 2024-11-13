@@ -11,10 +11,7 @@ import cn.org.subit.dataClasses.*
 import cn.org.subit.dataClasses.UserId.Companion.toUserIdOrNull
 import cn.org.subit.database.Authorizations
 import cn.org.subit.database.Users
-import cn.org.subit.route.utils.Context
-import cn.org.subit.route.utils.finishCall
-import cn.org.subit.route.utils.finishCallWithRedirect
-import cn.org.subit.route.utils.get
+import cn.org.subit.route.utils.*
 import cn.org.subit.utils.HttpStatus
 import cn.org.subit.utils.statuses
 import io.github.smiley4.ktorswaggerui.dsl.routing.get
@@ -25,6 +22,7 @@ import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
+import org.koin.ktor.ext.get
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -157,23 +155,37 @@ fun Route.serviceApi() = route("/serviceApi", {
                 HttpStatus.InvalidToken,
                 HttpStatus.InvalidOAuthCode,
                 HttpStatus.NotLoggedIn,
+                HttpStatus.NotFound,
                 HttpStatus.BadRequest.subStatus("time too long"),
                 HttpStatus.BadRequest.subStatus("user is required"),
             )
         }
     }) { getAccessToken() }
 
+    get("/authorizations", {
+        summary = "获得授权该服务的用户列表"
+        description = """
+            获得授权该服务的用户列表, 该接口需要在Authorization中添加服务token.
+        """.trimIndent()
+        request {
+            paged()
+        }
+        response {
+            statuses<Slice<AuthorizationInfo>>(HttpStatus.OK, example = sliceOf(AuthorizationInfo.example))
+        }
+    }) { getAuthorizations() }
+
     get("/info", {
         summary = "通过access token获取用户和服务信息"
         description = """
             通过access token获取用户和服务信息, 该接口需要在Authorization中添加access token.
             
-            当用户不存在时返回404. 当当前服务无权获得该用户的任何信息时, 返回200, 但user为null.
+            当用户不存在时返回404. 当当前服务无权获得该用户的任何信息时, 返回200, 但user为该用户的id.
         """.trimIndent()
         response {
             statuses<Information<UserFull>>(HttpStatus.OK.subStatus("获取全部用户信息"), example = Information(UserFull.example, BasicServiceInfo.example))
             statuses<Information<BasicUserInfo>>(HttpStatus.OK.subStatus("获取基本用户信息"), example = Information(BasicUserInfo.example, BasicServiceInfo.example))
-            statuses<Information<Nothing?>>(HttpStatus.OK.subStatus("无权获得用户信息"), example = Information(null, BasicServiceInfo.example))
+            statuses<Information<WrappingUserId>>(HttpStatus.OK.subStatus("无权获得用户信息"), example = Information(WrappingUserId(UserId(1)), BasicServiceInfo.example))
             statuses(HttpStatus.NotFound)
             statuses(HttpStatus.InvalidToken)
         }
@@ -203,11 +215,12 @@ private fun Context.oauthGetAccessToken()
     getAccessToken(codeUser, service.id, time)
 }
 
-private fun Context.getAccessToken(): Nothing
+private suspend fun Context.getAccessToken(): Nothing
 {
     val time = call.request.queryParameters["time"]?.toIntOrNull()?.seconds ?: JWTAuth.OAUTH_ACCESS_TOKEN_DEFAULT_VALIDITY
     val user = call.request.queryParameters["user"]?.toUserIdOrNull() ?: finishCall(HttpStatus.BadRequest.subStatus("user is required"))
     val service = getLoginService() ?: finishCall(HttpStatus.NotLoggedIn)
+    get<Users>().getUser(user) ?: finishCall(HttpStatus.NotFound)
     getAccessToken(user, service.id, time)
 }
 
@@ -233,7 +246,7 @@ private suspend fun Context.getStatus()
 }
 
 @Serializable
-private data class AccessToken(val accessToken: String, val tokenType: String, val expiresIn: Long)
+private data class AccessToken(val accessToken: String, val tokenType: String, val accessTokenExpiresIn: Long)
 
 private fun Context.refreshAccessToken(): Nothing
 {
@@ -244,10 +257,13 @@ private fun Context.refreshAccessToken(): Nothing
 }
 
 @Serializable
-data class Information<User>(
+private data class Information<User>(
     val user: User,
     val service: BasicServiceInfo,
 )
+
+@Serializable
+private data class WrappingUserId(val id: UserId)
 
 private suspend fun Context.getInfo()
 {
@@ -255,14 +271,13 @@ private suspend fun Context.getInfo()
     val auth = get<Authorizations>().getAuthorization(token.user, token.service.id)
     val permission = when (auth?.cancel)
     {
-        true -> token.service.authorized
-        false -> token.service.cancelAuthorization
+        true -> token.service.cancelAuthorization
+        false -> token.service.authorized
         null -> token.service.unauthorized
     }
-    @Suppress("IMPLICIT_CAST_TO_ANY")
-    val user = when (permission)
+    val user: Any = when (permission)
     {
-        ServicePermission.NONE -> null
+        ServicePermission.NONE -> token.user
         ServicePermission.BASIC -> get<Users>().getUser(token.user)?.toUserFull()?.toBasicUserInfo() ?: finishCall(HttpStatus.NotFound)
         ServicePermission.ALL -> get<Users>().getUser(token.user)?.toUserFull() ?: finishCall(HttpStatus.NotFound)
     }
@@ -271,6 +286,15 @@ private suspend fun Context.getInfo()
     {
         is BasicUserInfo -> finishCall(HttpStatus.OK.subStatus("获取基本用户信息"), Information(user, token.service.toBasicServiceInfo()))
         is UserFull -> finishCall(HttpStatus.OK.subStatus("获取全部用户信息"), Information(user, token.service.toBasicServiceInfo()))
-        else -> finishCall(HttpStatus.OK.subStatus("无权获得用户信息"), Information(null, token.service.toBasicServiceInfo()))
+        is UserId -> finishCall(HttpStatus.OK.subStatus("无权获得用户信息"), Information(WrappingUserId(user), token.service.toBasicServiceInfo()))
+        else -> finishCall(HttpStatus.InvalidToken)
     }
+}
+
+private suspend fun Context.getAuthorizations()
+{
+    val service = getLoginService() ?: finishCall(HttpStatus.NotLoggedIn)
+    val (begin, count) = call.getPage()
+    val authorizations = get<Authorizations>().getAuthorizations(service.id, begin, count)
+    finishCall(HttpStatus.OK, authorizations)
 }
