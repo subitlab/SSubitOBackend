@@ -28,7 +28,7 @@ fun Query.asSlice(begin: Long, limit: Int): Slice<ResultRow>
 
     val resQ = q1.union(q2)
     val list = WithQuery(resQ, q)
-        .apply { prepareSQL(QueryBuilder(false)).let(Slice.logger::config) }
+        .apply { prepareSQL(QueryBuilder(false)).let(Slice.logger::finest) }
         .toList()
 
     val resCount = list.first { !it[isData] }[totalSize]

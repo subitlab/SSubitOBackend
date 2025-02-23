@@ -17,7 +17,6 @@ import cn.org.subit.route.utils.finishCall
 import cn.org.subit.route.utils.get
 import cn.org.subit.utils.*
 import io.github.smiley4.ktorswaggerui.dsl.routing.*
-import io.ktor.server.application.*
 import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
@@ -40,12 +39,12 @@ fun Route.basic() = route("/auth", {
         this.response {
             statuses<JWTAuth.Token>(HttpStatus.OK, example = JWTAuth.Token("token"))
             statuses(
-                HttpStatus.WrongEmailCode,
-                HttpStatus.EmailExist,
-                HttpStatus.EmailFormatError,
-                HttpStatus.UsernameFormatError,
-                HttpStatus.PasswordFormatError,
-                HttpStatus.NotInWhitelist
+                HttpStatus.WrongEmailCode.subStatus(code = 1),
+                HttpStatus.EmailExist.subStatus(code = 2),
+                HttpStatus.EmailFormatError.subStatus(code = 3),
+                HttpStatus.UsernameFormatError.subStatus(code = 4),
+                HttpStatus.PasswordFormatError.subStatus(code = 5),
+                HttpStatus.NotInWhitelist.subStatus(code = 6),
             )
         }
     }) { register() }
@@ -63,8 +62,8 @@ fun Route.basic() = route("/auth", {
         this.response {
             statuses<JWTAuth.Token>(HttpStatus.OK, example = JWTAuth.Token("token"))
             statuses(
-                HttpStatus.PasswordError,
-                HttpStatus.AccountNotExist,
+                HttpStatus.PasswordError.subStatus(code = 1),
+                HttpStatus.AccountNotExist.subStatus(code = 2),
             )
         }
     }) { login() }
@@ -82,8 +81,8 @@ fun Route.basic() = route("/auth", {
         this.response {
             statuses<JWTAuth.Token>(HttpStatus.OK, example = JWTAuth.Token("token"))
             statuses(
-                HttpStatus.AccountNotExist,
-                HttpStatus.WrongEmailCode,
+                HttpStatus.AccountNotExist.subStatus(code = 1),
+                HttpStatus.WrongEmailCode.subStatus(code = 2),
             )
         }
     }) { loginByCode() }
@@ -101,8 +100,8 @@ fun Route.basic() = route("/auth", {
         this.response {
             statuses(HttpStatus.OK)
             statuses(
-                HttpStatus.WrongEmailCode,
-                HttpStatus.AccountNotExist,
+                HttpStatus.WrongEmailCode.subStatus(code = 1),
+                HttpStatus.AccountNotExist.subStatus(code = 2),
             )
         }
     }) { resetPassword() }
@@ -122,8 +121,8 @@ fun Route.basic() = route("/auth", {
             this.response {
                 statuses(HttpStatus.OK)
                 statuses(
-                    HttpStatus.EmailFormatError,
-                    HttpStatus.TooManyRequests
+                    HttpStatus.EmailFormatError.subStatus(code = 1),
+                    HttpStatus.TooManyRequests.subStatus(code = 2),
                 )
             }
         }) { sendEmailCode() }
@@ -142,17 +141,14 @@ fun Route.basic() = route("/auth", {
         this.response {
             statuses<JWTAuth.Token>(HttpStatus.OK, example = JWTAuth.Token("token"))
             statuses(
-                HttpStatus.NotLoggedIn,
-                HttpStatus.PasswordError,
-                HttpStatus.PasswordFormatError,
+                HttpStatus.NotLoggedIn.subStatus(code = 1),
+                HttpStatus.PasswordError.subStatus(code = 2),
+                HttpStatus.PasswordFormatError.subStatus(code = 3),
             )
         }
     }) { changePassword() }
 
-    route("/email", {
-        request {
-        }
-    })
+    route("/email")
     {
         post("", {
             description = "添加邮箱"

@@ -16,7 +16,6 @@ import cn.org.subit.plugin.webSockets.installWebSockets
 import cn.org.subit.route.router
 import cn.org.subit.utils.Power
 import io.ktor.server.application.*
-import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import net.mamoe.yamlkt.Yaml
 import java.io.File
@@ -55,7 +54,7 @@ private fun parseCommandLineArgs(args: Array<String>): Pair<Array<String>, File>
     dataDir.mkdirs()
 
     // 是否开启debug模式
-    debug = argsMap["-debug"]?.toBoolean() ?: false
+    debug = argsMap["-debug"].toBoolean()
     System.setProperty("io.ktor.development", "$debug")
 
     // 去除命令行中的-config参数, 因为ktor会解析此参数进而不加载打包的application.yaml
@@ -102,14 +101,8 @@ fun main(args: Array<String>)
 
     val resArgs = args1 + "-config=${tempFile.absolutePath}"
 
-    // 生成环境
-    val environment = commandLineEnvironment(args = resArgs)
-    {
-        SSubitOLogger.getLogger().info("rootPath: ${this.rootPath}")
-        SSubitOLogger.getLogger().info("port: ${this.config}")
-    }
     // 启动服务器
-    embeddedServer(Netty, environment).start(wait = true)
+    EngineMain.main(resArgs)
     // 若服务器关闭则终止整个程序
     Power.shutdown(0)
 }

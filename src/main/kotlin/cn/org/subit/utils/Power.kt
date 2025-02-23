@@ -1,12 +1,11 @@
 package cn.org.subit.utils
 
-import io.ktor.server.application.*
-import io.ktor.server.engine.*
-import org.koin.core.component.KoinComponent
 import cn.org.subit.console.AnsiStyle.Companion.RESET
 import cn.org.subit.console.SimpleAnsiColor.Companion.CYAN
 import cn.org.subit.console.SimpleAnsiColor.Companion.PURPLE
 import cn.org.subit.logger.SSubitOLogger
+import io.ktor.server.application.*
+import org.koin.core.component.KoinComponent
 import kotlin.system.exitProcess
 
 @Suppress("unused")
@@ -25,10 +24,9 @@ object Power: KoinComponent
         // 尝试主动结束Ktor, 这一过程不一定成功, 例如Ktor本来就在启动过程中出错将关闭失败
         if (this != null) runCatching()
         {
-            val environment = this.environment
-            environment.monitor.raise(ApplicationStopPreparing, environment)
-            if (environment is ApplicationEngineEnvironment) environment.stop()
-            else this@shutdown.dispose()
+            monitor.raise(ApplicationStopPreparing, environment)
+            engine.stop()
+            this.dispose()
         }.onFailure {
             logger.warning("Failed to stop Ktor: ${it.message}")
             it.printStackTrace(SSubitOLogger.err)

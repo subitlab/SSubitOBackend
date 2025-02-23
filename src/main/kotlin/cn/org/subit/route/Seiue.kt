@@ -23,8 +23,8 @@ import io.ktor.client.call.*
 import io.ktor.client.engine.java.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import io.ktor.server.application.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 
@@ -47,13 +47,24 @@ fun Route.seiue() = route("/seiue", {
 {
     get("/bind", {
         description = "绑定学号"
+        request {
+            queryParameter<String>("from")
+            {
+                required = false
+            }
+        }
     })
     {
+        val redirect = systemConfig.redirectUri
+        val hasParam = '?' in redirect
+        val from = call.request.rawQueryParameters["from"]
+            ?.let { if (hasParam) "&from=${it}" else "?from=${it}" }
+            ?.encodeURLParameter() ?: ""
         finishCallWithRedirect(
             "https://passport.seiue.com/authorize?response_type=token" +
             "&client_id=${systemConfig.clientId}" +
             "&school_id=${systemConfig.schoolId}" +
-            "&redirect_uri=${systemConfig.redirectUri}"
+            "&redirect_uri=$redirect$from"
         )
     }
 

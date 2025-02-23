@@ -6,12 +6,12 @@ val hikaricp_version: String by project
 val koin_version: String by project
 val jline_version: String by project
 val swagger_ui_version: String by project
-val schema_kenerator: String by project
+val schema_kenerator_version: String by project
 
 plugins {
-    kotlin("jvm") version "2.0.20"
-    kotlin("plugin.serialization") version "2.0.20"
-    id("io.ktor.plugin") version "2.3.12"
+    kotlin("jvm") version "2.1.0"
+    kotlin("plugin.serialization") version "2.1.0"
+    id("io.ktor.plugin") version "3.0.3"
 }
 
 group = "cn.org.subit"
@@ -55,9 +55,9 @@ dependencies {
 
     // utils
     implementation("io.github.smiley4:ktor-swagger-ui:$swagger_ui_version") // 创建api页面
-    implementation("io.github.smiley4:schema-kenerator-core:$schema_kenerator")
-    implementation("io.github.smiley4:schema-kenerator-reflection:$schema_kenerator")
-    implementation("io.github.smiley4:schema-kenerator-swagger:$schema_kenerator")
+    implementation("io.github.smiley4:schema-kenerator-core:$schema_kenerator_version")
+    implementation("io.github.smiley4:schema-kenerator-reflection:$schema_kenerator_version")
+    implementation("io.github.smiley4:schema-kenerator-swagger:$schema_kenerator_version")
     implementation("io.swagger.parser.v3:swagger-parser:2.1.22")
     implementation("com.sun.mail:javax.mail:1.6.2") // 邮件发送
     implementation("ch.qos.logback:logback-classic:$logback_version") // 日志
@@ -88,13 +88,6 @@ dependencies {
 
     implementation("me.nullaqua:BluestarAPI-kotlin:4.3.3")
     implementation("me.nullaqua:BluestarAPI-kotlin-reflect:4.3.3")
-
-
-    testImplementation("io.ktor:ktor-server-tests-jvm")
-    testImplementation("io.ktor:ktor-server-test-host")
-    testImplementation("io.ktor:ktor-server-test-host-jvm")
-    testImplementation(kotlin("test"))
-    testImplementation(kotlin("test-junit"))
 }
 
 tasks.withType<ProcessResources> {

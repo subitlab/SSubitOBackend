@@ -15,7 +15,6 @@ import cn.org.subit.route.utils.finishCallWithText
 import cn.org.subit.utils.HttpStatus
 import io.github.smiley4.ktorswaggerui.dsl.routing.route
 import io.ktor.http.*
-import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
@@ -99,7 +98,7 @@ fun Route.terminal() = route("/terminal", {
 
     get("")
     {
-        val html = Loader.getResource("terminal.html")!!.readAllBytes().decodeToString().replace("\${root}", application.environment.rootPath)
+        val html = Loader.getResource("terminal.html")!!.readAllBytes().decodeToString().replace("\${root}", application.rootPath)
         finishCallWithText(HttpStatus.OK, html, ContentType.Text.Html)
     }
 

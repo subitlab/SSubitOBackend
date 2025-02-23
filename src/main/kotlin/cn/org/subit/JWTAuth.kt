@@ -9,6 +9,7 @@ import cn.org.subit.dataClasses.UserId.Companion.toUserId
 import cn.org.subit.database.Services
 import cn.org.subit.database.Users
 import cn.org.subit.logger.SSubitOLogger
+import cn.org.subit.route.utils.Context
 import cn.org.subit.utils.toEnumOrNull
 import com.auth0.jwt.JWT
 import com.auth0.jwt.JWTVerifier
@@ -16,8 +17,8 @@ import com.auth0.jwt.algorithms.Algorithm
 import com.auth0.jwt.interfaces.Payload
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
-import io.ktor.util.pipeline.*
-import kotlinx.datetime.*
+import kotlinx.datetime.toJavaInstant
+import kotlinx.datetime.toKotlinInstant
 import kotlinx.serialization.Serializable
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -219,11 +220,11 @@ object JWTAuth: KoinComponent
         }
     }
 
-    fun PipelineContext<*, ApplicationCall>.getLoginUser(): UserInfo? = call.principal<UserInfo>()
-    fun PipelineContext<*, ApplicationCall>.getLoginService(): ServiceInfo? = call.principal<ServiceInfo>()
-    fun PipelineContext<*, ApplicationCall>.getOAuthCodeUser(): UserId? = call.principal<OAuthCodePrincipal>()?.user
-    fun PipelineContext<*, ApplicationCall>.getOAuthAccessToken(): OAuthAccessTokenPrincipal? = call.principal<OAuthAccessTokenPrincipal>()
-    fun PipelineContext<*, ApplicationCall>.getOAuthRefreshToken(): OAuthRefreshTokenPrincipal? = call.principal<OAuthRefreshTokenPrincipal>()
+    fun Context.getLoginUser(): UserInfo? = call.principal<UserInfo>()
+    fun Context.getLoginService(): ServiceInfo? = call.principal<ServiceInfo>()
+    fun Context.getOAuthCodeUser(): UserId? = call.principal<OAuthCodePrincipal>()?.user
+    fun Context.getOAuthAccessToken(): OAuthAccessTokenPrincipal? = call.principal<OAuthAccessTokenPrincipal>()
+    fun Context.getOAuthRefreshToken(): OAuthRefreshTokenPrincipal? = call.principal<OAuthRefreshTokenPrincipal>()
 
     private val hasher = BCrypt.with(BCrypt.Version.VERSION_2B)
     private val verifier = BCrypt.verifyer(BCrypt.Version.VERSION_2B)

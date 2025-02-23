@@ -2,23 +2,25 @@
 
 package cn.org.subit.route.utils
 
+import cn.org.subit.dataClasses.UserFull
 import cn.org.subit.utils.HttpStatus
 import io.github.smiley4.ktorswaggerui.data.ValueExampleDescriptor
 import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRequest
 import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRequestParameter
 import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiSimpleBody
 import io.ktor.server.application.*
-import io.ktor.util.pipeline.*
+import io.ktor.server.auth.*
+import io.ktor.server.routing.*
 import org.koin.core.parameter.ParametersDefinition
 import org.koin.core.qualifier.Qualifier
 import org.koin.ktor.ext.get
 
-typealias Context = PipelineContext<*, ApplicationCall>
+typealias Context = RoutingContext
 
 inline fun <reified T: Any> Context.get(
     qualifier: Qualifier? = null,
     noinline parameters: ParametersDefinition? = null
-) = application.get<T>(qualifier, parameters)
+) = call.application.get<T>(qualifier, parameters)
 
 /**
  * 辅助方法, 标记此方法返回需要传入begin和count, 用于分页
@@ -56,6 +58,9 @@ inline fun <reified T> OpenApiRequestParameter.example(any: T)
 {
     this.example = ValueExampleDescriptor("example", any)
 }
+
+inline fun Context.getLoginUser(): UserFull? = call.getLoginUser()
+inline fun ApplicationCall.getLoginUser(): UserFull? = this.principal<UserFull>()
 
 fun ApplicationCall.getRealIp(): String
 {

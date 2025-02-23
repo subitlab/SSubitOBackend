@@ -18,11 +18,9 @@ import io.github.smiley4.ktorswaggerui.dsl.routing.get
 import io.github.smiley4.ktorswaggerui.dsl.routing.route
 import io.github.smiley4.ktorswaggerui.routing.openApiSpec
 import io.github.smiley4.ktorswaggerui.routing.swaggerUI
-import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
-import org.koin.ktor.ext.get
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -31,7 +29,7 @@ fun Route.serviceApi() = route("/serviceApi", {
     specId = "serviceApi"
 })
 {
-    val rootPath = application.environment.rootPath
+    val rootPath = application.rootPath
 
     route("/api-docs")
     {
@@ -86,10 +84,10 @@ fun Route.serviceApi() = route("/serviceApi", {
                         example = AccessAndRefreshToken.example,
                     )
                     statuses(
-                        HttpStatus.InvalidToken,
-                        HttpStatus.InvalidOAuthCode,
-                        HttpStatus.NotLoggedIn,
-                        HttpStatus.BadRequest.subStatus("time too long"),
+                        HttpStatus.InvalidToken.subStatus(code = 1),
+                        HttpStatus.InvalidOAuthCode.subStatus(code = 2),
+                        HttpStatus.NotLoggedIn.subStatus(code = 3),
+                        HttpStatus.BadRequest.subStatus("time too long", 4),
                     )
                 }
             }) { oauthGetAccessToken() }
@@ -152,12 +150,12 @@ fun Route.serviceApi() = route("/serviceApi", {
         response {
             statuses<AccessAndRefreshToken>(HttpStatus.OK, example = AccessAndRefreshToken.example)
             statuses(
-                HttpStatus.InvalidToken,
-                HttpStatus.InvalidOAuthCode,
-                HttpStatus.NotLoggedIn,
+                HttpStatus.InvalidToken.subStatus(code = 1),
+                HttpStatus.InvalidOAuthCode.subStatus(code = 2),
+                HttpStatus.NotLoggedIn.subStatus(code = 3),
                 HttpStatus.NotFound,
-                HttpStatus.BadRequest.subStatus("time too long"),
-                HttpStatus.BadRequest.subStatus("user is required"),
+                HttpStatus.BadRequest.subStatus("time too long", 4),
+                HttpStatus.BadRequest.subStatus("user is required", 5),
             )
         }
     }) { getAccessToken() }
@@ -183,9 +181,9 @@ fun Route.serviceApi() = route("/serviceApi", {
             当用户不存在时返回404. 当当前服务无权获得该用户的任何信息时, 返回200, 但user为该用户的id.
         """.trimIndent()
         response {
-            statuses<Information<UserFull>>(HttpStatus.OK.subStatus("获取全部用户信息"), example = Information(UserFull.example, BasicServiceInfo.example))
-            statuses<Information<BasicUserInfo>>(HttpStatus.OK.subStatus("获取基本用户信息"), example = Information(BasicUserInfo.example, BasicServiceInfo.example))
-            statuses<Information<WrappingUserId>>(HttpStatus.OK.subStatus("无权获得用户信息"), example = Information(WrappingUserId(UserId(1)), BasicServiceInfo.example))
+            statuses<Information<UserFull>>(HttpStatus.OK.subStatus("获取全部用户信息", 1), example = Information(UserFull.example, BasicServiceInfo.example))
+            statuses<Information<BasicUserInfo>>(HttpStatus.OK.subStatus("获取基本用户信息", 2), example = Information(BasicUserInfo.example, BasicServiceInfo.example))
+            statuses<Information<WrappingUserId>>(HttpStatus.OK.subStatus("无权获得用户信息", 3), example = Information(WrappingUserId(UserId(1)), BasicServiceInfo.example))
             statuses(HttpStatus.NotFound)
             statuses(HttpStatus.InvalidToken)
         }

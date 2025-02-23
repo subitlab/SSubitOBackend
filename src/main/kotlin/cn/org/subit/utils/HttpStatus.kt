@@ -1,18 +1,21 @@
 package cn.org.subit.utils
 
+import cn.org.subit.logger.SSubitOLogger
 import cn.org.subit.route.utils.example
+import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiResponse
 import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiResponses
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import kotlinx.serialization.Serializable
+import me.nullaqua.api.kotlin.reflect.getField
 import org.intellij.lang.annotations.Language
 
 /**
  * 定义了一些出现的自定义的HTTP状态码, 更多HTTP状态码请参考[io.ktor.http.HttpStatusCode]
  */
 @Suppress("unused")
-data class HttpStatus(val code: HttpStatusCode, val message: String)
+data class HttpStatus(val code: HttpStatusCode, val message: String, val subStatus: Int = 0)
 {
     companion object
     {
@@ -28,11 +31,11 @@ data class HttpStatus(val code: HttpStatusCode, val message: String)
         val UsernameFormatError = HttpStatus(HttpStatusCode.BadRequest, "用户名格式错误")
         // 操作需要登陆, 未登陆 401
         val NotLoggedIn = HttpStatus(HttpStatusCode.Unauthorized, "未登录, 请先登录")
-        // JWT Token 无效
+        // JWT Token 无效 401
         val InvalidToken = HttpStatus(HttpStatusCode.Unauthorized, "Token无效, 请重新登录")
-        // OAuth code 无效
+        // OAuth code 无效 400
         val InvalidOAuthCode = HttpStatus(HttpStatusCode.BadRequest, "授权码无效")
-        // 未授权
+        // 未授权 401
         val Unauthorized = HttpStatus(HttpStatusCode.Unauthorized, "未授权")
         // 密码错误 401
         val PasswordError = HttpStatus(HttpStatusCode.Unauthorized, "账户或密码错误")
@@ -76,30 +79,40 @@ data class HttpStatus(val code: HttpStatusCode, val message: String)
         val Conflict = HttpStatus(HttpStatusCode.Conflict, "冲突")
     }
 
-    fun subStatus(message: String) = HttpStatus(code, "${this.message}: $message")
+    fun subStatus(message: String? = null, code: Int = this.subStatus) =
+        if (message != null) HttpStatus(this@HttpStatus.code, "${this.message}: $message", code)
+        else HttpStatus(this@HttpStatus.code, this.message, code)
 }
 
 @Serializable
-data class Response<T>(val code: Int, val message: String, val data: T? = null)
+data class Response<T>(val code: Int, val subStatus: Int, val message: String, val data: T)
 {
-    constructor(status: HttpStatus, data: T? = null): this(status.code.value, status.message, data)
+    constructor(status: HttpStatus, data: T): this(status.code.value, status.subStatus, status.message, data)
 }
 
 suspend inline fun ApplicationCall.respond(status: HttpStatus) =
-    this.respond(status.code, Response<Nothing>(status))
+    this.respond(status.code, Response<Nothing?>(status, null))
 suspend inline fun <reified T: Any> ApplicationCall.respond(status: HttpStatus, t: T) =
     this.respond(status.code, Response(status, t))
 
-fun OpenApiResponses.statuses(vararg statuses: HttpStatus, @Language("Markdown") bodyDescription: String = "错误信息") =
+fun OpenApiResponses.statuses(vararg statuses: HttpStatus, @Language("Markdown") bodyDescription: String = "错误信息")
+{
+    @Suppress("UNCHECKED_CAST")
+    val response = this@statuses.getField("responses") as Map<String, OpenApiResponse>
+    val logger = SSubitOLogger.getLogger()
+
     statuses.forEach {
-        it.message to {
-            description = "code: ${it.code.value}, message: ${it.message}"
-            body<Response<Nothing>> {
+        if ("${it.code.value}/${it.subStatus}" in response) logger.warning("重复定义HTTP状态码: ${it.code.value}/${it.subStatus}", IllegalStateException())
+
+        "${it.code.value}/${it.subStatus}" to {
+            description = it.message
+            body<Response<Nothing?>> {
                 description = bodyDescription
-                example("固定值", Response<Nothing>(it))
+                example("固定值", Response<Nothing?>(it, null))
             }
         }
     }
+}
 
 inline fun <reified T: Any> OpenApiResponses.statuses(
     vararg statuses: HttpStatus,
@@ -116,9 +129,14 @@ inline fun <reified T: Any> OpenApiResponses.statuses(
     examples: List<T> = emptyList()
 )
 {
+    @Suppress("UNCHECKED_CAST")
+    val response = this@statuses.getField("responses") as Map<String, OpenApiResponse>
+    val logger = SSubitOLogger.getLogger()
+
     statuses.forEach {
-        it.message to {
-            description = "code: ${it.code.value}, message: ${it.message}"
+        if ("${it.code.value}/${it.subStatus}" in response) logger.warning("重复定义HTTP状态码: ${it.code.value}/${it.subStatus}", IllegalStateException())
+        "${it.code.value}/${it.subStatus}" to {
+            description = it.message
             body<Response<T>>
             {
                 description = bodyDescription
@@ -133,9 +151,9 @@ fun OpenApiResponses.statuses(contentType: ContentType, vararg statuses: HttpSta
     statuses.forEach {
         it.message to {
             description = "code: ${it.code.value}, message: ${it.message}"
-            body<Response<Nothing>> {
+            body<Response<Nothing?>> {
                 description = bodyDescription
-                example("固定值", Response<Nothing>(it))
+                example("固定值", Response<Nothing?>(it, null))
                 mediaTypes(contentType)
             }
         }

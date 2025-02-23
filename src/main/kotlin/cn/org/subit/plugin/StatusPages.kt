@@ -25,7 +25,7 @@ fun Application.installStatusPages() = install(StatusPages)
     val logger = SSubitOLogger.getLogger()
 
     exception<CallFinish> { call, finish ->
-        logger.config("CallFinish in ${call.request.path()}", finish)
+        logger.finest("CallFinish in ${call.request.path()}", finish)
         finish.block(call)
     }
     exception<BadRequestException> { call, _ -> call.respond(HttpStatus.BadRequest) }
@@ -38,6 +38,7 @@ fun Application.installStatusPages() = install(StatusPages)
     status(HttpStatusCode.NotFound) { _ -> if (!call.hasResponseBody()) call.respond(HttpStatus.NotFound) }
     status(HttpStatusCode.Forbidden) { _ -> if (!call.hasResponseBody()) call.respond(HttpStatus.Forbidden) }
     status(HttpStatusCode.BadRequest) { _ -> if (!call.hasResponseBody()) call.respond(HttpStatus.BadRequest) }
+    status(HttpStatusCode.UnsupportedMediaType) { _ -> if (!call.hasResponseBody()) call.respond(HttpStatus.UnsupportedMediaType) }
 
     /** 针对请求过于频繁的处理, 详见[RateLimit] */
     status(HttpStatusCode.TooManyRequests)

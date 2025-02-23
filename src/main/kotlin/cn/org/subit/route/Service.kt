@@ -19,7 +19,6 @@ import io.github.smiley4.ktorswaggerui.dsl.routing.post
 import io.github.smiley4.ktorswaggerui.dsl.routing.put
 import io.github.smiley4.ktorswaggerui.dsl.routing.route
 import io.ktor.http.*
-import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.Dispatchers
@@ -118,8 +117,8 @@ fun Route.service() = route("/service", {
             """.trimIndent()
             summary = "获取服务信息"
             response {
-                statuses<ServiceInfo>(HttpStatus.OK.subStatus("获取服务信息成功"), example = ServiceInfo.example)
-                statuses<BasicServiceInfo>(HttpStatus.OK.subStatus("获取服务基础信息成功"), example = BasicServiceInfo.example)
+                statuses<ServiceInfo>(HttpStatus.OK.subStatus("获取服务信息成功", 1), example = ServiceInfo.example)
+                statuses<BasicServiceInfo>(HttpStatus.OK.subStatus("获取服务基础信息成功", 2), example = BasicServiceInfo.example)
             }
         }) { getServiceInfo() }
 
@@ -152,7 +151,7 @@ fun Route.service() = route("/service", {
                 }
             }
             response {
-                statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.NotFound, HttpStatus.Conflict.subStatus("服务名称重复"))
+                statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.NotFound, HttpStatus.Conflict.subStatus("服务名称重复", 1))
             }
         }) { updateService() }
     }
