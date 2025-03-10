@@ -56,12 +56,18 @@ class Services: SqlDao<Services.ServiceTable>(ServiceTable)
         name: String,
         description: String,
         owner: UserId,
+        unauthorized: ServicePermission,
+        authorized: ServicePermission,
+        cancelAuthorization: ServicePermission,
     ): ServiceId? = query()
     {
         insertIgnoreAndGetId {
             it[ServiceTable.name] = name
             it[ServiceTable.description] = description
             it[ServiceTable.owner] = owner
+            it[ServiceTable.unauthorized] = unauthorized
+            it[ServiceTable.authorized] = authorized
+            it[ServiceTable.cancelAuthorization] = cancelAuthorization
         }?.value
     }
 

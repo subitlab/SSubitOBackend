@@ -193,6 +193,9 @@ fun Route.service() = route("/service", {
 private data class CreateData(
     val name: String,
     val description: String,
+    val unauthorized: ServicePermission,
+    val authorized: ServicePermission,
+    val cancelAuthorization: ServicePermission,
 )
 
 private suspend fun Context.createService(): Nothing
@@ -200,7 +203,7 @@ private suspend fun Context.createService(): Nothing
     val data = call.receive<CreateData>()
     val user = getLoginUser() ?: finishCall(HttpStatus.NotLoggedIn)
     val services = get<Services>()
-    val id = services.createService(data.name, data.description, user.id)
+    val id = services.createService(data.name, data.description, user.id, data.unauthorized, data.authorized, data.cancelAuthorization)
     if (id != null) finishCall(HttpStatus.OK, id)
     else finishCall(HttpStatus.Conflict.subStatus("服务名称重复"))
 }
