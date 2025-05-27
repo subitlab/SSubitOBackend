@@ -2,13 +2,19 @@ package cn.org.subit.database
 
 import cn.org.subit.JWTAuth
 import cn.org.subit.dataClasses.Permission
-import cn.org.subit.database.utils.singleOrNull
+import cn.org.subit.dataClasses.ServiceId
+import cn.org.subit.dataClasses.ServicePermission
+import cn.org.subit.dataClasses.Slice
 import cn.org.subit.dataClasses.UserId
 import cn.org.subit.dataClasses.UserInfo
+import cn.org.subit.database.utils.CustomExpressionWithColumnType
+import cn.org.subit.database.utils.asSlice
+import cn.org.subit.database.utils.singleOrNull
 import kotlinx.datetime.Instant
 import kotlinx.datetime.toKotlinInstant
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.kotlin.datetime.CurrentTimestampWithTimeZone
 import org.jetbrains.exposed.sql.kotlin.datetime.timestampWithTimeZone
 import org.koin.core.component.inject
@@ -31,6 +37,8 @@ class Users: SqlDao<Users.UserTable>(UserTable)
     }
 
     private val emails: Emails by inject()
+    private val services: Services by inject()
+    private val authorizations: Authorizations by inject()
 
     private fun deserialize(row: ResultRow) = UserInfo(
         id = row[UserTable.id].value,
@@ -117,7 +125,34 @@ class Users: SqlDao<Users.UserTable>(UserTable)
             .join(emails.table, JoinType.RIGHT, table.id, emails.table.user)
             .select(table.password, table.id)
             .where { emails.table.email eq email.lowercase() }
-            .singleOrNull()?.let { it[table.id].value to it[table.password] } ?: return@query null
+            .singleOrNull()
+            ?.let { it[table.id].value to it[table.password] } ?: return@query null
         return@query if (JWTAuth.verifyPassword(password, psw)) id else null
+    }
+
+
+    suspend fun searchUser(
+        key: String,
+        service: ServiceId,
+        begin: Long,
+        count: Int,
+    ): Slice<UserInfo> = query()
+    {
+        val serviceInfo = services.getService(service) ?: return@query Slice.empty()
+
+        table
+            .join(authorizations.table, JoinType.LEFT, table.id, authorizations.table.user) { authorizations.table.service eq service }
+            .selectAll()
+            .andWhere { UserTable.username like "%$key%" }
+            .andWhere {
+                case()
+                    .When(authorizations.table.cancel eq false, booleanParam(serviceInfo.authorized >= ServicePermission.BASIC))
+                    .When(authorizations.table.cancel eq true, booleanParam(serviceInfo.cancelAuthorization >= ServicePermission.BASIC))
+                    .Else(CustomExpressionWithColumnType(booleanParam(serviceInfo.unauthorized >= ServicePermission.BASIC), BooleanColumnType()))
+                    .eq(true)
+            }
+            .orderBy(table.id to SortOrder.ASC)
+            .asSlice(begin, count)
+            .map(::deserialize)
     }
 }

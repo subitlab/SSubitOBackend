@@ -113,6 +113,8 @@ fun main(args: Array<String>)
 @Suppress("unused")
 fun Application.init()
 {
+    installKoin()
+
     version = environment.config.property("version").getString()
 
     if (debug) SSubitOLogger.globalLogger.warning("Debug mode is enabled")
@@ -130,7 +132,6 @@ fun Application.init()
     installContentNegotiation()
     installCORS()
     installDoubleReceive()
-    installKoin()
     installRateLimit()
     installStatusPages()
     installWebSockets()

@@ -86,7 +86,7 @@ object SqlDatabase: KoinComponent
     fun Application.init()
     {
         config = environment.config
-        val lazyInit = config.propertyOrNull("database.sql.lazyInit")?.getString()?.toBoolean() ?: true
+        val lazyInit = config.propertyOrNull("database.sql.lazyInit")?.getString()?.toBoolean() != false
 
         logger.info("Init database. impl: sql, LazyInit: $lazyInit")
         val url = config.propertyOrNull("database.sql.url")?.getString()

@@ -10,6 +10,7 @@ import cn.org.subit.JWTAuth.getOAuthRefreshToken
 import cn.org.subit.dataClasses.*
 import cn.org.subit.dataClasses.UserId.Companion.toUserIdOrNull
 import cn.org.subit.database.Authorizations
+import cn.org.subit.database.StudentIds
 import cn.org.subit.database.Users
 import cn.org.subit.route.utils.*
 import cn.org.subit.utils.HttpStatus
@@ -173,6 +174,69 @@ fun Route.serviceApi() = route("/serviceApi", {
         }
     }) { getAuthorizations() }
 
+    route("/search")
+    {
+        get("/username", {
+            summary = "通过用户名（关键字）搜索用户"
+            description = """
+                通过用户名搜索用户, 该接口需要在Authorization中添加服务token.
+                
+                注意该接口仅返回授权当前服务的用户.
+            """.trimIndent()
+            request {
+                queryParameter<String>("key")
+                {
+                    required = true
+                    description = "用户名关键字"
+                }
+                paged()
+            }
+            response {
+                statuses<Slice<UserId>>(HttpStatus.OK, example = sliceOf(UserId(1)))
+            }
+        }, Context::searchUserByUsername)
+
+        get("/realName", {
+            summary = "通过真实姓名（关键字）搜索用户"
+            description = """
+                通过真实姓名搜索用户, 该接口需要在Authorization中添加服务token.
+                
+                注意该接口仅返回授权当前服务的用户.
+            """.trimIndent()
+            request {
+                queryParameter<String>("key")
+                {
+                    required = true
+                    description = "真实姓名关键字"
+                }
+                paged()
+            }
+            response {
+                statuses<Slice<UserId>>(HttpStatus.OK, example = sliceOf(UserId(1)))
+            }
+        }, Context::searchUserByRealName)
+
+        get("/studentId", {
+            summary = "通过学号前缀搜索用户"
+            description = """
+                通过学号搜索用户, 该接口需要在Authorization中添加服务token.
+                
+                注意该接口仅返回授权当前服务的用户.
+            """.trimIndent()
+            request {
+                queryParameter<String>("key")
+                {
+                    required = true
+                    description = "学号关键字"
+                }
+                paged()
+            }
+            response {
+                statuses<Slice<UserId>>(HttpStatus.OK, example = sliceOf(UserId(1)))
+            }
+        }, Context::searchUserByStudentId)
+    }
+
     get("/info", {
         summary = "通过access token获取用户和服务信息"
         description = """
@@ -295,4 +359,31 @@ private suspend fun Context.getAuthorizations()
     val (begin, count) = call.getPage()
     val authorizations = get<Authorizations>().getAuthorizations(service.id, begin, count)
     finishCall(HttpStatus.OK, authorizations)
+}
+
+private suspend fun Context.searchUserByUsername(): Nothing
+{
+    val service = getLoginService() ?: finishCall(HttpStatus.NotLoggedIn)
+    val key = call.request.queryParameters["key"] ?: finishCall(HttpStatus.BadRequest.subStatus("key is required"))
+    val (begin, count) = call.getPage()
+    val users = get<Users>().searchUser(key, service.id, begin, count)
+    finishCall(HttpStatus.OK, users.map { it.id })
+}
+
+private suspend fun Context.searchUserByRealName(): Nothing
+{
+    val service = getLoginService() ?: finishCall(HttpStatus.NotLoggedIn)
+    val key = call.request.queryParameters["key"] ?: finishCall(HttpStatus.BadRequest.subStatus("key is required"))
+    val (begin, count) = call.getPage()
+    val users = get<StudentIds>().searchUserByRealName(key, service.id, begin, count)
+    finishCall(HttpStatus.OK, users)
+}
+
+private suspend fun Context.searchUserByStudentId(): Nothing
+{
+    val service = getLoginService() ?: finishCall(HttpStatus.NotLoggedIn)
+    val key = call.request.queryParameters["key"] ?: finishCall(HttpStatus.BadRequest.subStatus("key is required"))
+    val (begin, count) = call.getPage()
+    val users = get<StudentIds>().searchUserByStudentId(key, service.id, begin, count)
+    finishCall(HttpStatus.OK, users)
 }
