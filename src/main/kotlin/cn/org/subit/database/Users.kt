@@ -1,12 +1,8 @@
 package cn.org.subit.database
 
 import cn.org.subit.JWTAuth
-import cn.org.subit.dataClasses.Permission
-import cn.org.subit.dataClasses.ServiceId
-import cn.org.subit.dataClasses.ServicePermission
+import cn.org.subit.dataClasses.*
 import cn.org.subit.dataClasses.Slice
-import cn.org.subit.dataClasses.UserId
-import cn.org.subit.dataClasses.UserInfo
 import cn.org.subit.database.utils.CustomExpressionWithColumnType
 import cn.org.subit.database.utils.asSlice
 import cn.org.subit.database.utils.singleOrNull
@@ -14,7 +10,6 @@ import kotlinx.datetime.Instant
 import kotlinx.datetime.toKotlinInstant
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.kotlin.datetime.CurrentTimestampWithTimeZone
 import org.jetbrains.exposed.sql.kotlin.datetime.timestampWithTimeZone
 import org.koin.core.component.inject
@@ -48,12 +43,9 @@ class Users: SqlDao<Users.UserTable>(UserTable)
         phone = row[UserTable.phone] ?: ""
     )
 
-    suspend fun createUser(
-        username: String,
-        password: String
-    ): UserId = query()
+    suspend fun createUser(username: String, password: String): UserId = query()
     {
-        val psw = JWTAuth.encryptPassword(password) // 加密密码
+        val psw = JWTAuth.encryptPassword(password)
         insertAndGetId {
             it[UserTable.username] = username
             it[UserTable.password] = psw

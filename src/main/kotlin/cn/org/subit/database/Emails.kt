@@ -6,7 +6,7 @@ import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.insertIgnoreAndGetId
 
 class Emails: SqlDao<Emails.EmailTable>(EmailTable)
 {
@@ -23,17 +23,17 @@ class Emails: SqlDao<Emails.EmailTable>(EmailTable)
         select(email).where { user eq userId }.map { it[email].value }
     }
 
-    suspend fun getEmailUsers(email: String): UserId? = query()
+    suspend fun getEmailUser(email: String): UserId? = query()
     {
         select(user).where { table.email eq email.lowercase() }.singleOrNull()?.get(user)?.value
     }
 
-    suspend fun addEmail(userId: UserId, email: String) = query()
+    suspend fun addEmail(userId: UserId, email: String): Boolean = query()
     {
-        insert {
+        insertIgnoreAndGetId {
             it[user] = userId
             it[this.email] = email.lowercase()
-        }
+        } != null
     }
 
     suspend fun removeEmail(userId: UserId, email: String): Boolean = query()

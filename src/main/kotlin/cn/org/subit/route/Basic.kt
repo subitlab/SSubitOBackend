@@ -173,7 +173,7 @@ fun Route.basic() = route("/auth", {
                 statuses(HttpStatus.OK)
                 statuses(HttpStatus.AccountNotExist)
             }
-        }) { deleteEmail() }
+        }, Context::deleteEmail)
     }
 }
 
@@ -199,7 +199,7 @@ private suspend fun Context.register()
     val id = registerLocks.withLock(registerInfo.email)
     {
         // 创建用户
-        if (get<Emails>().getEmailUsers(registerInfo.email) != null) finishCall(HttpStatus.EmailExist)
+        if (get<Emails>().getEmailUser(registerInfo.email) != null) finishCall(HttpStatus.EmailExist)
         val id = get<Users>().createUser(
             username = registerInfo.username,
             password = registerInfo.password,
@@ -238,7 +238,7 @@ private suspend fun Context.loginByCode()
     val loginInfo = call.receive<LoginByCodeInfo>()
     if (!get<EmailCodes>().verifyEmailCode(loginInfo.email, loginInfo.code, EmailCodes.EmailCodeUsage.LOGIN))
         finishCall(HttpStatus.WrongEmailCode)
-    val user = get<Emails>().getEmailUsers(loginInfo.email) ?: finishCall(HttpStatus.AccountNotExist)
+    val user = get<Emails>().getEmailUser(loginInfo.email) ?: finishCall(HttpStatus.AccountNotExist)
     if (get<Users>().getUser(user)?.permission == Permission.BANNED) finishCall(HttpStatus.Prohibit)
     val token = JWTAuth.makeUserToken(user)
     finishCall(HttpStatus.OK, token)
@@ -291,7 +291,7 @@ private suspend fun Context.sendEmailCode()
         finishCall(HttpStatus.EmailFormatError)
     if (emailInfo.usage == EmailCodes.EmailCodeUsage.LOGIN)
     {
-        get<Emails>().getEmailUsers(emailInfo.email) ?: finishCall(HttpStatus.AccountNotExist)
+        get<Emails>().getEmailUser(emailInfo.email) ?: finishCall(HttpStatus.AccountNotExist)
     }
     val emailCodes = get<EmailCodes>()
     emailCodes.sendEmailCode(emailInfo.email, emailInfo.usage)
@@ -307,8 +307,10 @@ private suspend fun Context.addEmail()
     if (!get<EmailCodes>().verifyEmailCode(addEmailInfo.email, addEmailInfo.code, EmailCodes.EmailCodeUsage.ADD_EMAIL))
         finishCall(HttpStatus.WrongEmailCode)
     val user = getLoginUser() ?: finishCall(HttpStatus.NotLoggedIn)
-    get<Emails>().addEmail(user.id, addEmailInfo.email)
-    finishCall(HttpStatus.OK)
+    if (get<Emails>().addEmail(user.id, addEmailInfo.email))
+        finishCall(HttpStatus.OK)
+    else
+        finishCall(HttpStatus.EmailExist.copy(message = "邮箱已被绑定"))
 }
 
 private suspend fun Context.deleteEmail()

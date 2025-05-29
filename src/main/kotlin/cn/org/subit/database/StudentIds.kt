@@ -1,27 +1,16 @@
 package cn.org.subit.database
 
-import cn.org.subit.dataClasses.ServiceId
-import cn.org.subit.dataClasses.ServicePermission
+import cn.org.subit.dataClasses.*
 import cn.org.subit.dataClasses.Slice
-import cn.org.subit.dataClasses.UserFull
-import cn.org.subit.dataClasses.UserId
 import cn.org.subit.database.Users.UserTable
 import cn.org.subit.database.utils.CustomExpressionWithColumnType
 import cn.org.subit.database.utils.asSlice
 import cn.org.subit.database.utils.singleOrNull
 import cn.org.subit.plugin.contentNegotiation.dataJson
 import org.jetbrains.exposed.dao.id.IdTable
-import org.jetbrains.exposed.sql.BooleanColumnType
-import org.jetbrains.exposed.sql.JoinType
-import org.jetbrains.exposed.sql.SortOrder
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.andWhere
-import org.jetbrains.exposed.sql.booleanParam
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.json.jsonb
-import org.jetbrains.exposed.sql.selectAll
 import org.koin.core.component.inject
 
 class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
@@ -58,15 +47,15 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
         select(user).where { table.studentId eq studentId }.singleOrNull()?.get(user)?.value
     }
 
-    suspend inline fun <reified T> addStudentId(userId: UserId, studentId: String, realName: String, archived: Boolean, seiue: T) = query()
+    suspend inline fun <reified T> addStudentId(userId: UserId, studentId: String, realName: String, archived: Boolean, seiue: T): Boolean = query()
     {
-        insert {
-            it[user] = userId
-            it[this.studentId] = studentId
-            it[this.realName] = realName
-            it[this.archived] = archived
-            it[rawData] = dataJson.encodeToString<T>(seiue)
-        }
+        insertIgnoreAndGetId {
+            it[table.user] = userId
+            it[table.studentId] = studentId
+            it[table.realName] = realName
+            it[table.archived] = archived
+            it[table.rawData] = dataJson.encodeToString<T>(seiue)
+        } != null
     }
 
     suspend fun getStudentIdCount(userId: UserId): Long = query()
