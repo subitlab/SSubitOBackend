@@ -17,7 +17,6 @@ import cn.org.subit.route.utils.example
 import cn.org.subit.route.utils.finishCall
 import cn.org.subit.route.utils.finishCallWithRedirect
 import cn.org.subit.route.utils.get
-import cn.org.subit.route.utils.inject
 import cn.org.subit.utils.HttpStatus
 import cn.org.subit.utils.Locks
 import cn.org.subit.utils.statuses
@@ -58,23 +57,22 @@ fun Route.seiue() = route("/seiue", {
     get("/bind", {
         description = "绑定学号"
         request {
-            queryParameter<String>("from")
+            queryParameter<String>("redirect_uri")
             {
                 required = false
             }
         }
     })
     {
-        val redirect = systemConfig.redirectUri
-        val hasParam = '?' in redirect
-        val from = call.request.rawQueryParameters["from"]
-            ?.let { if (hasParam) "&from=${it}" else "?from=${it}" }
-            ?.encodeURLParameter() ?: ""
+        val redirectUri = call.request.queryParameters["redirect_uri"]
+        if (redirectUri != null && !systemConfig.frontendRegex.matches(redirectUri))
+            finishCall(HttpStatus.BadRequest.copy(message = "redirect_uri 不合法"))
+        val redirect = redirectUri?.let { "&redirect_uri=" + it.encodeURLParameter() } ?: ""
         finishCallWithRedirect(
             "https://passport.seiue.com/authorize?response_type=token" +
             "&client_id=${systemConfig.clientId}" +
             "&school_id=${systemConfig.schoolId}" +
-            "&redirect_uri=$redirect$from"
+            redirect
         )
     }
 
