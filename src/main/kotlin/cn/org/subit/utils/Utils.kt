@@ -27,7 +27,7 @@ private val logger = SSubitOLogger.getLogger()
 /**
  * 检查邮箱格式是否正确
  */
-fun checkEmail(email: String): Boolean = emailConfig.pattern.matcher(email).matches()
+fun checkEmail(email: String): Boolean = emailConfig.regex.matches(email)
 
 /**
  * 检查密码是否合法
