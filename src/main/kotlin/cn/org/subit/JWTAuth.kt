@@ -137,7 +137,7 @@ object JWTAuth: KoinComponent
         .apply { claims.forEach { (k, v) -> withClaim(k, v) } }
         .withExpiresAt((OffsetDateTime.now().toInstant().toKotlinInstant() + validity).toJavaInstant())
         .withIssuer("subit")
-        .withIssuedAt(OffsetDateTime.now().toInstant().toKotlinInstant().toJavaInstant())
+        .withIssuedAt(OffsetDateTime.now().toInstant())
         .sign(algorithm)
         .let(::Token)
 

@@ -125,7 +125,7 @@ fun Route.basic() = route("/auth", {
                     HttpStatus.TooManyRequests.subStatus(code = 2),
                 )
             }
-        }) { sendEmailCode() }
+        }, Context::sendEmailCode)
     }
 
     post("/changePassword", {
