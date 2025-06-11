@@ -63,6 +63,11 @@ class Authorizations: SqlDao<Authorizations.AuthorizationTable>(AuthorizationTab
             .map(::deserialize)
     }
 
+    suspend fun revokeAuthorizations(service: ServiceId): Unit = query()
+    {
+        update({ AuthorizationTable.service eq service }) { it[cancel] = true }
+    }
+
     suspend fun getAuthorizations(service: ServiceId, begin: Long, count: Int): Slice<AuthorizationInfo> = query()
     {
         selectAll().where { AuthorizationTable.service eq service }.asSlice(begin, count).map(::deserialize)

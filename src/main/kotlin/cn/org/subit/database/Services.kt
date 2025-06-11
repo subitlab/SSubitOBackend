@@ -91,17 +91,17 @@ class Services: SqlDao<Services.ServiceTable>(ServiceTable)
      * 获得服务列表, 仅能看到自己有权看到的服务
      */
     suspend fun getServices(
-        loginUser: UserInfo?,
         owner: UserId?,
         status: ServiceStatus?,
+        key: String? = null,
         begin: Long,
         count: Int,
     ): Slice<ServiceInfo> = query()
     {
         selectAll()
-            .apply { if (!loginUser.hasAdmin) andWhere { (table.owner eq loginUser?.id) or (table.status eq ServiceStatus.NORMAL) } }
             .apply { owner?.let { andWhere { ServiceTable.owner eq owner } } }
             .apply { status?.let { andWhere { ServiceTable.status eq status } } }
+            .apply { key?.let { andWhere { ServiceTable.name like "%$key%" } } }
             .asSlice(begin, count)
             .map(::deserialize)
     }

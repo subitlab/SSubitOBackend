@@ -35,7 +35,7 @@ fun Application.installAuthentication() = install(Authentication)
                 it.response.header(HttpHeaders.SecWebSocketProtocol, "Bearer")
                 t.getOrNull(index + 1)?.value?.let { token -> "Bearer $token" }
             }
-            val res = token?.let(::parseAuthorizationHeader)
+            val res = token?.runCatching(::parseAuthorizationHeader)?.getOrNull()
             logger.config("ssubito-auth token: $res")
             res
         }
@@ -50,7 +50,7 @@ fun Application.installAuthentication() = install(Authentication)
     jwt("ssubito-oauth-code")
     {
         authHeader {
-            val res = it.request.header("Oauth-Code")?.let(::parseAuthorizationHeader)
+            val res = it.request.header("Oauth-Code")?.runCatching(::parseAuthorizationHeader)?.getOrNull()
             logger.config("ssubito-oauth-code token: $res")
             res
         }

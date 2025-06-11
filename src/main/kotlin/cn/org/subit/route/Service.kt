@@ -7,6 +7,7 @@ import cn.org.subit.JWTAuth.getLoginUser
 import cn.org.subit.dataClasses.*
 import cn.org.subit.dataClasses.ServiceId.Companion.toServiceIdOrNull
 import cn.org.subit.dataClasses.UserId.Companion.toUserIdOrNull
+import cn.org.subit.database.Authorizations
 import cn.org.subit.database.Services
 import cn.org.subit.logger.SSubitOLogger
 import cn.org.subit.route.utils.*
@@ -164,18 +165,28 @@ fun Route.service() = route("/service", {
             queryParameter<UserId>("owner")
             {
                 required = false
-                description = "服务所有者, 若不填则不限制"
+                description = """
+                    服务所有者
+                    
+                    对于管理员：若不填则获得所有服务，若填则获得指定用户的服务
+                    对于其余用户：只能填自己或不填，且都只能获得自己的服务
+                """.trimIndent()
             }
             queryParameter<ServiceStatus>("status")
             {
                 required = false
                 description = "服务状态, 若不填则不限制"
             }
+            queryParameter<String>("key")
+            {
+                required = false
+                description = "服务名称关键字, 若不填则不限制"
+            }
         }
         response {
-            statuses<Slice<BasicServiceInfo>>(HttpStatus.OK, example = sliceOf(BasicServiceInfo.example))
+            statuses<Slice<ServiceInfo>>(HttpStatus.OK, example = sliceOf(ServiceInfo.example))
         }
-    }) { getServiceList() }
+    }, Context::getServiceList)
 
     get("/needPending", {
         description = "获取需要处理的服务列表, 仅管理员可用"
@@ -264,9 +275,13 @@ private suspend fun Context.getServiceList(): Nothing
     val user = getLoginUser() ?: finishCall(HttpStatus.NotLoggedIn)
     val owner = call.parameters["owner"]?.toUserIdOrNull()
     val status = call.parameters["status"]?.toEnumOrNull<ServiceStatus>()
+    val key = call.queryParameters["key"]?.takeIf { it.isNotBlank() }
     val (begin, count) = call.getPage()
     val services = get<Services>()
-    val list = services.getServices(user, owner, status, begin, count).map { it.toBasicServiceInfo() }
+    val list =
+        if (user.hasAdmin) services.getServices(owner, status, key, begin, count)
+        else if (owner == null || owner == user.id) services.getServices(user.id, status, key, begin, count)
+        else finishCall(HttpStatus.Forbidden.subStatus("仅管理员可查看其他用户的服务"))
     finishCall(HttpStatus.OK, list)
 }
 
@@ -320,6 +335,11 @@ private suspend fun Context.updateService(): Nothing
             )
         )
         if (!res) finishCall(HttpStatus.Conflict.subStatus("服务名称重复"))
+        if (data.authorized > service.authorized)
+        {
+            logger.info("服务 ${service.name} 的授权权限从 ${service.authorized} 提升到 ${data.authorized}, 该服务的全部授权将被取消")
+            get<Authorizations>().revokeAuthorizations(service.id)
+        }
     }
     else if (
         data.name == service.name &&

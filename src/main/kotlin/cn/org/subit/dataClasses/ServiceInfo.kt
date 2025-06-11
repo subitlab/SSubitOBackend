@@ -19,7 +19,7 @@ data class ServiceInfo(
     val pendingCancelAuthorization: ServicePermission?,
 ): SsoPrincipal
 {
-    fun toBasicServiceInfo() = BasicServiceInfo(id, name, description)
+    fun toBasicServiceInfo() = BasicServiceInfo(id, name, description, authorized)
     companion object
     {
         val example get() = ServiceInfo(
@@ -45,6 +45,7 @@ data class BasicServiceInfo(
     val id: ServiceId,
     val name: String,
     val description: String,
+    val authorized: ServicePermission,
 )
 {
     companion object
