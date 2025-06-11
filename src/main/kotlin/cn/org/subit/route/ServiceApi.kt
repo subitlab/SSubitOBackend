@@ -4,6 +4,7 @@ package cn.org.subit.route.serviceApi
 
 import cn.org.subit.JWTAuth
 import cn.org.subit.JWTAuth.getLoginService
+import cn.org.subit.JWTAuth.getLoginUser
 import cn.org.subit.JWTAuth.getOAuthAccessToken
 import cn.org.subit.JWTAuth.getOAuthCodeUser
 import cn.org.subit.JWTAuth.getOAuthRefreshToken
@@ -13,18 +14,23 @@ import cn.org.subit.database.Authorizations
 import cn.org.subit.database.StudentIds
 import cn.org.subit.database.Users
 import cn.org.subit.route.utils.*
+import cn.org.subit.utils.FileUtils.getAvatar
 import cn.org.subit.utils.HttpStatus
 import cn.org.subit.utils.statuses
 import io.github.smiley4.ktorswaggerui.dsl.routing.get
 import io.github.smiley4.ktorswaggerui.dsl.routing.route
 import io.github.smiley4.ktorswaggerui.routing.openApiSpec
 import io.github.smiley4.ktorswaggerui.routing.swaggerUI
+import io.ktor.http.*
 import io.ktor.server.auth.*
+import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
+import javax.imageio.ImageIO
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
+@Suppress("DuplicatedCode")
 fun Route.serviceApi() = route("/serviceApi", {
     tags("服务接口")
     specId = "serviceApi"
@@ -252,6 +258,21 @@ fun Route.serviceApi() = route("/serviceApi", {
             statuses(HttpStatus.InvalidToken)
         }
     }) { getInfo() }
+
+    get("/avatar/{id}", {
+        description = "获取用户头像"
+        request {
+            pathParameter<UserId>("id")
+            {
+                required = true
+                description = "要获取的用户ID, 0为当前登陆用户, 若id不为0则无需登陆, 否则需要登陆"
+            }
+        }
+        response {
+            statuses(ContentType.Image.PNG, HttpStatus.OK, bodyDescription = "获取到的头像, 总是png格式的")
+            statuses(HttpStatus.BadRequest, HttpStatus.NotLoggedIn)
+        }
+    }) { getAvatar() }
 }
 
 @Serializable
@@ -386,4 +407,18 @@ private suspend fun Context.searchUserByStudentId(): Nothing
     val (begin, count) = call.getPage()
     val users = get<StudentIds>().searchUserByStudentId(key, service.id, begin, count)
     finishCall(HttpStatus.OK, users)
+}
+
+@Suppress("DuplicatedCode")
+private fun Context.getAvatar()
+{
+    val doNotCache: Boolean
+    val id = (call.parameters["id"]?.toUserIdOrNull() ?: finishCall(HttpStatus.BadRequest)).let {
+        doNotCache = it == UserId(0)
+        if (it == UserId(0)) getLoginUser()?.id ?: finishCall(HttpStatus.NotLoggedIn)
+        else it
+    }
+    val avatar = getAvatar(id)
+    if (!doNotCache) call.response.header(HttpHeaders.CacheControl, "max-age=${15*60}")
+    finishCallWithBytes(HttpStatus.OK, ContentType.Image.PNG) { ImageIO.write(avatar, "png", this) }
 }
