@@ -32,6 +32,7 @@ class Users: SqlDao<Users.UserTable>(UserTable)
     }
 
     private val emails: Emails by inject()
+    private val studentIds: StudentIds by inject()
     private val services: Services by inject()
     private val authorizations: Authorizations by inject()
 
@@ -117,12 +118,23 @@ class Users: SqlDao<Users.UserTable>(UserTable)
      * @param password 密码
      * @return 当用户不存在或密码错误时返回null, 否则返回用户id
      */
-    suspend fun checkLogin(email: String, password: String): UserId? = query()
+    suspend fun checkLoginByEmail(email: String, password: String): UserId? = query()
     {
         val (id, psw) = table
             .join(emails.table, JoinType.RIGHT, table.id, emails.table.user)
             .select(table.password, table.id)
             .where { emails.table.email eq email.lowercase() }
+            .singleOrNull()
+            ?.let { it[table.id].value to it[table.password] } ?: return@query null
+        return@query if (JWTAuth.verifyPassword(password, psw)) id else null
+    }
+
+    suspend fun checkLoginByStudentId(studentId: String, password: String): UserId? = query()
+    {
+        val (id, psw) = table
+            .join(studentIds.table, JoinType.RIGHT, table.id, studentIds.table.user)
+            .select(table.password, table.id)
+            .where { studentIds.table.studentId eq studentId }
             .singleOrNull()
             ?.let { it[table.id].value to it[table.password] } ?: return@query null
         return@query if (JWTAuth.verifyPassword(password, psw)) id else null

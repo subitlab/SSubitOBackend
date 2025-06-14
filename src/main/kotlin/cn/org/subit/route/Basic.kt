@@ -55,8 +55,8 @@ fun Route.basic() = route("/auth", {
             body<Login>()
             {
                 required = true
-                description = "登陆信息, id(用户ID)和email(用户的邮箱)二选一"
-                example("example", Login(email = "email", password = "password", id = UserId(0)))
+                description = "登陆信息, id(用户ID)和email(用户的邮箱)和studentId(学号)三选一"
+                example("example", Login(email = "email", password = "password"))
             }
         }
         this.response {
@@ -66,7 +66,7 @@ fun Route.basic() = route("/auth", {
                 HttpStatus.AccountNotExist.subStatus(code = 2),
             )
         }
-    }) { login() }
+    }, Context::login)
 
     post("/loginByCode", {
         description = "通过邮箱验证码登陆, 若成功返回token"
@@ -214,15 +214,21 @@ private suspend fun Context.register()
 }
 
 @Serializable
-private data class Login(val email: String? = null, val id: UserId? = null, val password: String)
+private data class Login(
+    val email: String? = null,
+    val id: UserId? = null,
+    val studentId: String? = null,
+    val password: String
+)
 
 private suspend fun Context.login()
 {
     val users = get<Users>()
     val loginInfo = call.receive<Login>()
     val checked = if (loginInfo.id != null) loginInfo.id.takeIf { users.checkLogin(loginInfo.id, loginInfo.password) }
-    else if (loginInfo.email != null) users.checkLogin(loginInfo.email, loginInfo.password)
-    else finishCall(HttpStatus.BadRequest)
+    else if (loginInfo.email != null) users.checkLoginByEmail(loginInfo.email, loginInfo.password)
+    else if (loginInfo.studentId != null) users.checkLoginByStudentId(loginInfo.studentId, loginInfo.password)
+    else finishCall(HttpStatus.BadRequest.copy(message = "请提供用户ID、邮箱或学号"))
     // 若登陆失败，返回错误信息
     if (checked == null) finishCall(HttpStatus.PasswordError)
     if (users.getUser(checked)?.permission == Permission.BANNED) finishCall(HttpStatus.Prohibit)

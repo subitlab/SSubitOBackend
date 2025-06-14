@@ -31,6 +31,7 @@ val contentNegotiationJson = Json()
 val dataJson = Json(contentNegotiationJson)
 {
     prettyPrint = false
+    encodeDefaults = false
 }
 
 /**
