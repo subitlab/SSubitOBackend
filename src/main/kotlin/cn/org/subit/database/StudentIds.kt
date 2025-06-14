@@ -7,6 +7,8 @@ import cn.org.subit.database.utils.CustomExpressionWithColumnType
 import cn.org.subit.database.utils.asSlice
 import cn.org.subit.database.utils.singleOrNull
 import cn.org.subit.plugin.contentNegotiation.dataJson
+import cn.org.subit.route.seiue.RawSeiue
+import kotlinx.serialization.serializer
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -18,10 +20,10 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
     object StudentIdTable: IdTable<String>("student_id")
     {
         val studentId = varchar("student_id", 40).entityId()
-        val user = reference("user", Users.UserTable).index()
+        val user = reference("user", UserTable).index()
         val realName = varchar("real_name", 100).uniqueIndex()
         val archived = bool("archived").default(false)
-        val rawData = jsonb("raw_data", { it }, { it })
+        val rawData = jsonb<RawSeiue>("raw_data", dataJson, dataJson.serializersModule.serializer())
         override val id = studentId
         override val primaryKey = PrimaryKey(id)
     }
@@ -47,15 +49,26 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
         select(user).where { table.studentId eq studentId }.singleOrNull()?.get(user)?.value
     }
 
-    suspend inline fun <reified T> addStudentId(userId: UserId, studentId: String, realName: String, archived: Boolean, seiue: T): Boolean = query()
+    suspend inline fun addStudentId(userId: UserId, seiue: RawSeiue): Boolean = query()
     {
-        insertIgnoreAndGetId {
+        val res = insertIgnoreAndGetId {
             it[table.user] = userId
-            it[table.studentId] = studentId
-            it[table.realName] = realName
-            it[table.archived] = archived
-            it[table.rawData] = dataJson.encodeToString<T>(seiue)
+            it[table.studentId] = seiue.usin
+            it[table.realName] = seiue.name
+            it[table.archived] = !seiue.status.equals("normal", true)
+            it[table.rawData] = seiue
         } != null
+        if (!res) updateSeiue(seiue)
+        res
+    }
+
+    suspend fun updateSeiue(seiue: RawSeiue) = query()
+    {
+        update({ table.studentId eq seiue.usin }) {
+            it[realName] = seiue.name
+            it[archived] = !seiue.status.equals("normal", true)
+            it[rawData] = seiue
+        } > 0
     }
 
     suspend fun getStudentIdCount(userId: UserId): Long = query()

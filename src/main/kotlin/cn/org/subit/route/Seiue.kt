@@ -33,6 +33,7 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.request.receiveNullable
 import io.ktor.server.routing.*
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 private val logger = SSubitOLogger.getLogger()
@@ -159,31 +160,39 @@ data class ArchivedType(
     val archived_at: String? = null,
 )
 
-@Suppress("PropertyName")
 @Serializable
-data class Seiue(
+data class RawSeiue(
     val id: Int,
-    val school_id: Int,
+    @SerialName("school_id")
+    val schoolId: Int,
     val name: String,
     val role: String,
-    val department_names: List<String>? = null,
-    val pinyin: String,
-    val gender: String? = null,
-    val user_id: Int? = null,
-    val usin: String? = null,
-    val ename: String? = null,
-    val email: String? = null,
-    val phone: String? = null,
-    val idcard: String? = null,
-    val photo: String? = null,
-    val status: String? = null,
-    val archived_type_id: Int? = null,
-    val archived_type: ArchivedType? = null,
-    val outer_id: String? = null,
-    val deleted_at: String? = null,
+    @SerialName("department_names")
+    val departmentNames: List<String>,
+    val pinyin: String?,
+    val gender: String?,
+    @SerialName("user_id")
+    val userId: Int,
+    val usin: String,
+    val ename: String?,
+    val email: String?,
+    val phone: String?,
+    val idcard: String?,
+    val photo: String?,
+    val status: String?,
+    @SerialName("archived_type_id")
+    val archivedTypeId: Int? = null,
+    @SerialName("archived_type")
+    val archivedType: ArchivedType? = null,
+    @SerialName("outer_id")
+    val outerId: String? = null,
+    @SerialName("deleted_at")
+    val deletedAt: String? = null,
 )
 
 private val addBindLocks = Locks<String>()
+
+private const val getInfoUrl = "https://open.seiue.com/api/v3/oauth/me?expand=school_id,name,role,department_names,pinyin,gender,user_id,usin,ename,email,phone,idcard,photo,status,archived_type_id,archived_type,outer_id,deleted_at,id"
 
 private suspend fun Context.postBind()
 {
@@ -192,22 +201,21 @@ private suspend fun Context.postBind()
     val activeReflectionId =
         call.request.queryParameters["active_reflection_id"]?.toLongOrNull() ?: finishCall(HttpStatus.BadRequest)
 
-    val response = httpClient.get("https://open.seiue.com/api/v3/oauth/me?expand=email,usin,status")
+    val response = httpClient.get(getInfoUrl)
     {
         bearerAuth(token)
         header("X-Reflection-Id", activeReflectionId)
     }
 
-    val seiue = runCatching { response.body<Seiue>() }.getOrNull() ?: finishCall(HttpStatus.BadRequest.copy(message = "seiue token 无效"))
-    if (seiue.usin == null) finishCall(HttpStatus.BadRequest.copy(message = "seiue token 无效(学号为空)"))
+    val seiue = runCatching { response.body<RawSeiue>() }.getOrNull() ?: finishCall(HttpStatus.BadRequest.copy(message = "seiue token 无效"))
     val studentIds = get<StudentIds>()
 
-    if (seiue.school_id != systemConfig.schoolId)
+    if (seiue.schoolId != systemConfig.schoolId)
         finishCall(HttpStatus.BadRequest.copy(message = "学校不匹配"))
 
     addBindLocks.withLock(seiue.usin)
     {
-        if (studentIds.addStudentId(loginUser.id, seiue.usin, seiue.name, !seiue.status.equals("normal", true), seiue))
+        if (studentIds.addStudentId(loginUser.id, seiue))
             finishCall(HttpStatus.OK, "学号添加成功")
         else
             finishCall(HttpStatus.EmailExist.copy(message = "学号已绑定其他账号"))
@@ -234,20 +242,19 @@ private suspend fun Context.seiueLogin()
     val activeReflectionId =
         call.request.queryParameters["active_reflection_id"]?.toLongOrNull() ?: finishCall(HttpStatus.BadRequest.subStatus("active_reflection_id 为空", 2))
 
-    val response = httpClient.get("https://open.seiue.com/api/v3/oauth/me?expand=email,usin,status")
+    val response = httpClient.get(getInfoUrl)
     {
         bearerAuth(token)
         header("X-Reflection-Id", activeReflectionId)
     }
 
-    val seiue = runCatching { response.body<Seiue>() }.getOrNull() ?: finishCall(HttpStatus.BadRequest.subStatus("seiue token 无效", 3))
-    if (seiue.usin == null) finishCall(HttpStatus.BadRequest.subStatus("seiue token 无效(学号为空)", 4))
+    val seiue = runCatching { response.body<RawSeiue>() }.getOrNull() ?: finishCall(HttpStatus.BadRequest.subStatus("seiue token 无效", 3))
 
     val studentIds = get<StudentIds>()
     val emails = get<Emails>()
     val users = get<Users>()
 
-    if (seiue.school_id != systemConfig.schoolId)
+    if (seiue.schoolId != systemConfig.schoolId)
         finishCall(HttpStatus.BadRequest.subStatus("学校不匹配", 5))
 
     logger.fine("Seiue login: ${seiue.usin}(${seiue.name}) - ${seiue.email ?: "无邮箱"}")
@@ -257,7 +264,7 @@ private suspend fun Context.seiueLogin()
         val user = studentIds.getStudentIdUsers(seiue.usin) ?: seiue.email?.let { emails.getEmailUser(it) }
         if (user != null)
         {
-            studentIds.addStudentId(user, seiue.usin, seiue.name, !seiue.status.equals("normal", true), seiue)
+            studentIds.addStudentId(user, seiue)
             seiue.email?.let { emails.addEmail(user, it) }
 
             val token = JWTAuth.makeUserToken(user)
@@ -274,7 +281,7 @@ private suspend fun Context.seiueLogin()
 
         val newUser = users.createUser(seiue.name, body.password)
         emails.addEmail(newUser, email)
-        studentIds.addStudentId(newUser,seiue.usin, seiue.name, !seiue.status.equals("normal", true), seiue)
+        studentIds.addStudentId(newUser, seiue)
         val token = JWTAuth.makeUserToken(newUser)
         finishCall(HttpStatus.OK, SeiueLoginResponse(token.token))
     }
