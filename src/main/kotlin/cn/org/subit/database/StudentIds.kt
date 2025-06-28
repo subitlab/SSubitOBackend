@@ -86,9 +86,9 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
         val serviceInfo = services.getService(service) ?: return@query Slice.empty()
 
         table
-            .join(authorizations.table, JoinType.LEFT, table.id, authorizations.table.user) { authorizations.table.service eq service }
+            .join(authorizations.table, JoinType.LEFT, table.user, authorizations.table.user) { authorizations.table.service eq service }
             .selectAll()
-            .andWhere { UserTable.username like "$sid%" }
+            .andWhere { table.studentId like "$sid%" }
             .andWhere {
                 case()
                     .When(authorizations.table.cancel eq false, booleanParam(serviceInfo.authorized >= ServicePermission.ALL))
@@ -106,9 +106,9 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
         val serviceInfo = services.getService(service) ?: return@query Slice.empty()
 
         table
-            .join(authorizations.table, JoinType.LEFT, table.id, authorizations.table.user) { authorizations.table.service eq service }
+            .join(authorizations.table, JoinType.LEFT, table.user, authorizations.table.user) { authorizations.table.service eq service }
             .selectAll()
-            .andWhere { UserTable.username like "%$name%" }
+            .andWhere { table.realName like "%$name%" }
             .andWhere {
                 case()
                     .When(authorizations.table.cancel eq false, booleanParam(serviceInfo.authorized >= ServicePermission.ALL))

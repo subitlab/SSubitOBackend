@@ -153,7 +153,7 @@ class Users: SqlDao<Users.UserTable>(UserTable)
         table
             .join(authorizations.table, JoinType.LEFT, table.id, authorizations.table.user) { authorizations.table.service eq service }
             .selectAll()
-            .andWhere { UserTable.username like "%$key%" }
+            .andWhere { table.username like "%$key%" }
             .andWhere {
                 case()
                     .When(authorizations.table.cancel eq false, booleanParam(serviceInfo.authorized >= ServicePermission.BASIC))
