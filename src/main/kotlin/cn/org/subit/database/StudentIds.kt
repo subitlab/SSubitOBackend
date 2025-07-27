@@ -34,7 +34,7 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
 
     suspend fun getSeiue(userId: UserId): List<UserFull.Seiue> = query()
     {
-        select(studentId, realName, archived)
+        select(studentId, realName, role, archived)
             .where { user eq userId }
             .map { row ->
                 UserFull.Seiue(
