@@ -32,6 +32,11 @@ import java.sql.Driver
  */
 abstract class SqlDao<T: Table>(table: T): KoinComponent
 {
+    val logger by lazy()
+    {
+        SSubitOLogger.getLogger(this::class)
+    }
+
     suspend inline fun <R> query(crossinline block: suspend T.()->R) = table.run {
         newSuspendedTransaction(Dispatchers.IO) { block() }
     }

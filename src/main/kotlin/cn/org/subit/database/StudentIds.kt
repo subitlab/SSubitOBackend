@@ -22,6 +22,7 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
         val studentId = varchar("student_id", 40).entityId()
         val user = reference("user", UserTable).index()
         val realName = varchar("real_name", 100).uniqueIndex()
+        val role = enumerationByName<UserFull.Seiue.Role>("role", 16).index().default(UserFull.Seiue.Role.UNKNOWN)
         val archived = bool("archived").default(false)
         val rawData = jsonb<RawSeiue>("raw_data", dataJson, dataJson.serializersModule.serializer())
         override val id = studentId
@@ -39,6 +40,7 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
                 UserFull.Seiue(
                     studentId = row[studentId].value,
                     realName = row[realName],
+                    role = row[role],
                     archived = row[archived],
                 )
             }
@@ -51,10 +53,12 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
 
     suspend inline fun addStudentId(userId: UserId, seiue: RawSeiue): Boolean = query()
     {
-        val res = insertIgnoreAndGetId {
+        val res = insertIgnoreAndGetId()
+        {
             it[table.user] = userId
             it[table.studentId] = seiue.usin
             it[table.realName] = seiue.name
+            it[table.role] = UserFull.Seiue.Role.fromSeiueRole(seiue.role)
             it[table.archived] = !seiue.status.equals("normal", true)
             it[table.rawData] = seiue
         } != null
@@ -64,8 +68,10 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
 
     suspend fun updateSeiue(seiue: RawSeiue) = query()
     {
-        update({ table.studentId eq seiue.usin }) {
+        update({ table.studentId eq seiue.usin })
+        {
             it[realName] = seiue.name
+            it[role] = UserFull.Seiue.Role.fromSeiueRole(seiue.role)
             it[archived] = !seiue.status.equals("normal", true)
             it[rawData] = seiue
         } > 0
@@ -89,7 +95,8 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
             .join(authorizations.table, JoinType.LEFT, table.user, authorizations.table.user) { authorizations.table.service eq service }
             .selectAll()
             .andWhere { table.studentId like "$sid%" }
-            .andWhere {
+            .andWhere()
+            {
                 case()
                     .When(authorizations.table.cancel eq false, booleanParam(serviceInfo.authorized >= ServicePermission.ALL))
                     .When(authorizations.table.cancel eq true, booleanParam(serviceInfo.cancelAuthorization >= ServicePermission.ALL))
@@ -109,7 +116,8 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
             .join(authorizations.table, JoinType.LEFT, table.user, authorizations.table.user) { authorizations.table.service eq service }
             .selectAll()
             .andWhere { table.realName like "%$name%" }
-            .andWhere {
+            .andWhere()
+            {
                 case()
                     .When(authorizations.table.cancel eq false, booleanParam(serviceInfo.authorized >= ServicePermission.ALL))
                     .When(authorizations.table.cancel eq true, booleanParam(serviceInfo.cancelAuthorization >= ServicePermission.ALL))

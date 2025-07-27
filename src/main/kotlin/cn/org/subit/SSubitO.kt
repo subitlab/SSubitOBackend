@@ -35,7 +35,8 @@ var debug by Delegates.notNull<Boolean>()
  */
 private fun parseCommandLineArgs(args: Array<String>): Pair<Array<String>, File>
 {
-    val argsMap = args.mapNotNull {
+    val argsMap = args.mapNotNull()
+    {
         when (val idx = it.indexOf("="))
         {
             -1 -> null
@@ -73,6 +74,8 @@ fun main(args: Array<String>)
 {
     // 处理命令行应在最前面, 因为需要来解析workDir, 否则后面的程序无法正常运行
     val (args1, configFile) = runCatching { parseCommandLineArgs(args) }.getOrElse { return }
+
+    Power.init()
 
     // 初始化配置文件加载器, 会加载所有配置文件
     cn.org.subit.config.ConfigLoader.init()

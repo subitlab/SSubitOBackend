@@ -66,8 +66,50 @@ data class UserFull(
     data class Seiue(
         val studentId: String,
         val realName: String,
+        val role: Role,
         val archived: Boolean,
     )
+    {
+        @Serializable
+        enum class Role
+        {
+            /**
+             * 学生
+             */
+            STUDENT,
+
+            /**
+             * 教师
+             */
+            TEACHER,
+
+            /**
+             * 家长
+             */
+            PARENT,
+
+            /**
+             * 系统保留角色
+             */
+            CUSTOM,
+
+            /**
+             * 未知
+             */
+            UNKNOWN;
+
+            companion object
+            {
+                fun fromSeiueRole(role: String) = when(role.lowercase())
+                {
+                    "student" -> STUDENT
+                    "teacher" -> TEACHER
+                    "guardian" -> PARENT
+                    else -> UNKNOWN
+                }
+            }
+        }
+    }
 
     fun toBasicUserInfo() = BasicUserInfo(id, username, registrationTime, email)
     val hasAdmin get() = permission >= Permission.ADMIN
@@ -79,7 +121,7 @@ data class UserFull(
             email = listOf("email1@example.com", "email2@example.com", "email3@example.com"),
             phone = "12345678901",
             username = "username",
-            seiue = listOf(Seiue("studentId", "realName", false)),
+            seiue = listOf(Seiue("studentId", "realName", Seiue.Role.STUDENT, false)),
             permission = Permission.NORMAL,
             registrationTime = System.currentTimeMillis()
         )
