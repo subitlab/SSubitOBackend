@@ -149,7 +149,6 @@ class Users: SqlDao<Users.UserTable>(UserTable)
     ): Slice<UserInfo> = query()
     {
         val serviceInfo = services.getService(service) ?: return@query Slice.empty()
-
         table
             .join(authorizations.table, JoinType.LEFT, table.id, authorizations.table.user) { authorizations.table.service eq service }
             .selectAll()

@@ -21,9 +21,9 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
     {
         val studentId = varchar("student_id", 40).entityId()
         val user = reference("user", UserTable).index()
-        val realName = varchar("real_name", 100).uniqueIndex()
+        val realName = varchar("real_name", 100).index()
         val role = enumerationByName<UserFull.Seiue.Role>("role", 16).index().default(UserFull.Seiue.Role.UNKNOWN)
-        val archived = bool("archived").default(false)
+        val archived = bool("archived").default(false).index()
         val rawData = jsonb<RawSeiue>("raw_data", dataJson, dataJson.serializersModule.serializer())
         override val id = studentId
         override val primaryKey = PrimaryKey(id)
