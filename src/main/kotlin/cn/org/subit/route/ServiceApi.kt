@@ -196,10 +196,10 @@ fun Route.serviceApi() = route("/serviceApi", {
                     required = true
                     description = "用户名关键字"
                 }
-                queryParameter<AuthorizationStatus>("authorizationState")
+                queryParameter<List<AuthorizationStatus>>("authorizationState")
                 {
                     required = false
-                    description = "用户的授权状态，不传则为不限制"
+                    description = "用户的授权状态可选列表，json列表，不传/格式错误则为不限制"
                 }
                 paged()
             }
@@ -392,7 +392,7 @@ private suspend fun Context.searchUserByUsername(): Nothing
 {
     val service = getLoginService() ?: finishCall(HttpStatus.NotLoggedIn)
     val key = call.request.queryParameters["key"] ?: finishCall(HttpStatus.BadRequest.subStatus("key is required"))
-    val authorizationStatus = call.request.queryParameters["authorizationState"].decodeOrNull<AuthorizationStatus>()
+    val authorizationStatus = call.request.queryParameters["authorizationState"]?.let { "[$it]" }.decodeOrNull<List<AuthorizationStatus>>()
     val (begin, count) = call.getPage()
     val users = get<Users>().searchUser(key, service.id, begin, count, authorizationStatus)
     finishCall(HttpStatus.OK, users.map { it.id })

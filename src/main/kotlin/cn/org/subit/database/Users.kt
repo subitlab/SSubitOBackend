@@ -10,6 +10,9 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.isNotNull
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.isNull
 import org.jetbrains.exposed.sql.kotlin.datetime.CurrentTimestamp
 import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
 import org.koin.core.component.inject
@@ -146,9 +149,10 @@ class Users: SqlDao<Users.UserTable>(UserTable)
         service: ServiceId,
         begin: Long,
         count: Int,
-        authorizationState: AuthorizationStatus?
+        authorizationStatuses: List<AuthorizationStatus>?
     ): Slice<UserInfo> = query()
     {
+        if (authorizationStatuses?.isEmpty() == true) return@query Slice.empty()
         val serviceInfo = services.getService(service) ?: return@query Slice.empty()
         table
             .join(authorizations.table, JoinType.LEFT, table.id, authorizations.table.user) { authorizations.table.service eq service }
@@ -156,13 +160,17 @@ class Users: SqlDao<Users.UserTable>(UserTable)
             .andWhere { table.username like "%$key%" }
             .apply()
             {
-                when (authorizationState)
-                {
-                    null -> this
-                    AuthorizationStatus.UNAUTHORIZED -> andWhere { authorizations.table.id.isNull() }
-                    AuthorizationStatus.AUTHORIZED -> andWhere { authorizations.table.id.isNotNull() and (authorizations.table.cancel eq false) }
-                    AuthorizationStatus.CANCELED -> andWhere { authorizations.table.id.isNotNull() and (authorizations.table.cancel eq true) }
-                }
+                authorizationStatuses?.let { statuses ->
+                    if( statuses.isEmpty() ) return@apply
+                    val conditions = statuses.map { status ->
+                        when (status) {
+                            AuthorizationStatus.UNAUTHORIZED -> authorizations.table.id.isNull()
+                            AuthorizationStatus.AUTHORIZED -> authorizations.table.id.isNotNull() and (authorizations.table.cancel eq false)
+                            AuthorizationStatus.CANCELED -> authorizations.table.id.isNotNull() and (authorizations.table.cancel eq true)
+                        }
+                    }
+                    this.andWhere { conditions.reduce{ acc, condition -> acc or condition } }
+                } ?: this
             }
             .andWhere {
                 case()
