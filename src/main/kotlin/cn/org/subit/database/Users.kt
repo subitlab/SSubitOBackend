@@ -146,6 +146,7 @@ class Users: SqlDao<Users.UserTable>(UserTable)
         service: ServiceId,
         begin: Long,
         count: Int,
+        authorizationState: AuthorizationStatus?
     ): Slice<UserInfo> = query()
     {
         val serviceInfo = services.getService(service) ?: return@query Slice.empty()
@@ -153,6 +154,16 @@ class Users: SqlDao<Users.UserTable>(UserTable)
             .join(authorizations.table, JoinType.LEFT, table.id, authorizations.table.user) { authorizations.table.service eq service }
             .selectAll()
             .andWhere { table.username like "%$key%" }
+            .apply()
+            {
+                when (authorizationState)
+                {
+                    null -> this
+                    AuthorizationStatus.UNAUTHORIZED -> andWhere { authorizations.table.id.isNull() }
+                    AuthorizationStatus.AUTHORIZED -> andWhere { authorizations.table.id.isNotNull() and (authorizations.table.cancel eq false) }
+                    AuthorizationStatus.CANCELED -> andWhere { authorizations.table.id.isNotNull() and (authorizations.table.cancel eq true) }
+                }
+            }
             .andWhere {
                 case()
                     .When(authorizations.table.cancel eq false, booleanParam(serviceInfo.authorized >= ServicePermission.BASIC))

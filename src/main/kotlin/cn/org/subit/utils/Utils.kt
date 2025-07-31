@@ -24,6 +24,13 @@ import kotlin.time.Duration.Companion.seconds
 
 private val logger = SSubitOLogger.getLogger()
 
+inline fun <reified R> String?.decodeOrElse(block: (Throwable) -> R): R
+{
+    if (this == null) return block(NullPointerException("null string"))
+    return this.runCatching { contentNegotiationJson.decodeFromString<R>(this) }.getOrElse { block(it) }
+}
+inline fun <reified R> String?.decodeOrNull(): R? = decodeOrElse { null }
+
 /**
  * 检查邮箱格式是否正确
  */
