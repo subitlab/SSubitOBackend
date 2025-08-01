@@ -193,6 +193,7 @@ fun Route.serviceApi() = route("/serviceApi", {
             request {
                 queryParameter<String>("key")
                 {
+                    allowEmptyValue = true
                     required = true
                     description = "用户名关键字"
                 }
