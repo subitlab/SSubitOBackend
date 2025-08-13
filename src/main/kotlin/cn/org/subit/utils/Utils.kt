@@ -5,10 +5,7 @@ import cn.org.subit.config.emailConfig
 import cn.org.subit.database.EmailCodes
 import cn.org.subit.logger.SSubitOLogger
 import cn.org.subit.plugin.contentNegotiation.contentNegotiationJson
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.*
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.io.PrintStream
@@ -65,7 +62,10 @@ fun String?.toUUIDOrNull(): UUID? = runCatching { UUID.fromString(this) }.getOrN
 inline fun <reified T: Enum<T>> String?.toEnumOrNull(): T? =
     this?.runCatching { contentNegotiationJson.decodeFromString<T>(this) }?.getOrNull()
 
-private val sendEmailScope = CoroutineScope(Dispatchers.IO)
+private val sendEmailScope = CoroutineScope(Dispatchers.IO + CoroutineExceptionHandler
+{ _, throwable ->
+    logger.severe("Failed to send email", throwable)
+})
 
 fun sendEmail(email: String, code: String, usage: EmailCodes.EmailCodeUsage) = sendEmailScope.async()
 {

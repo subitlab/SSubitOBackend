@@ -295,7 +295,7 @@ private suspend fun Context.deleteBind()
     val studentId = call.request.queryParameters["studentId"] ?: finishCall(HttpStatus.BadRequest)
     val studentIds = get<StudentIds>()
 
-    deleteBindLocks.withLock<Nothing>(loginUser.id)
+    deleteBindLocks.withLock(loginUser.id)
     {
         if (studentIds.getStudentIdCount(loginUser.id) >= 2)
         {
