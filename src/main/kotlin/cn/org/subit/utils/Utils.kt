@@ -27,6 +27,8 @@ inline fun <reified R> String?.decodeOrElse(block: (Throwable) -> R): R
     return this.runCatching { contentNegotiationJson.decodeFromString<R>(this) }.getOrElse { block(it) }
 }
 inline fun <reified R> String?.decodeOrNull(): R? = decodeOrElse { null }
+inline fun <reified R: List<*>?> String?.decodeSearchListOrElse(block: (Throwable) -> R): R = this?.let{"[$this]"}.decodeOrElse(block)
+inline fun <reified R: List<*>?> String?.decodeSearchListOrNull(): R? = decodeSearchListOrElse { null }
 
 /**
  * 检查邮箱格式是否正确

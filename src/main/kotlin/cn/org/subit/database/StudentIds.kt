@@ -12,6 +12,8 @@ import kotlinx.serialization.serializer
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.isNotNull
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.isNull
 import org.jetbrains.exposed.sql.json.jsonb
 import org.koin.core.component.inject
 
@@ -87,7 +89,7 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
         deleteWhere { (user eq userId) and (table.studentId eq studentId) } > 0
     }
 
-    suspend fun searchUserByStudentId(sid: String, service: ServiceId, begin: Long, count: Int): Slice<UserId> = query()
+    suspend fun searchUserByStudentId(sid: String, service: ServiceId, begin: Long, count: Int, authorizationStatuses: List<AuthorizationStatus>?): Slice<UserId> = query()
     {
         val serviceInfo = services.getService(service) ?: return@query Slice.empty()
 
@@ -95,6 +97,20 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
             .join(authorizations.table, JoinType.LEFT, table.user, authorizations.table.user) { authorizations.table.service eq service }
             .selectAll()
             .andWhere { table.studentId like "$sid%" }
+            .apply()
+            {
+                authorizationStatuses?.let { statuses ->
+                    if( statuses.isEmpty() ) return@apply
+                    val conditions = statuses.map { status ->
+                        when (status) {
+                            AuthorizationStatus.UNAUTHORIZED -> authorizations.table.id.isNull()
+                            AuthorizationStatus.AUTHORIZED -> authorizations.table.id.isNotNull() and (authorizations.table.cancel eq false)
+                            AuthorizationStatus.CANCELED -> authorizations.table.id.isNotNull() and (authorizations.table.cancel eq true)
+                        }
+                    }
+                    this.andWhere { conditions.reduce{ acc, condition -> acc or condition } }
+                } ?: this
+            }
             .andWhere()
             {
                 case()
@@ -108,7 +124,7 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
             .map { it[table.user].value }
     }
 
-    suspend fun searchUserByRealName(name: String, service: ServiceId, begin: Long, count: Int): Slice<UserId> = query()
+    suspend fun searchUserByRealName(name: String, service: ServiceId, begin: Long, count: Int, authorizationStatuses: List<AuthorizationStatus>?): Slice<UserId> = query()
     {
         val serviceInfo = services.getService(service) ?: return@query Slice.empty()
 
@@ -116,6 +132,20 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
             .join(authorizations.table, JoinType.LEFT, table.user, authorizations.table.user) { authorizations.table.service eq service }
             .selectAll()
             .andWhere { table.realName like "%$name%" }
+            .apply()
+            {
+                authorizationStatuses?.let { statuses ->
+                    if( statuses.isEmpty() ) return@apply
+                    val conditions = statuses.map { status ->
+                        when (status) {
+                            AuthorizationStatus.UNAUTHORIZED -> authorizations.table.id.isNull()
+                            AuthorizationStatus.AUTHORIZED -> authorizations.table.id.isNotNull() and (authorizations.table.cancel eq false)
+                            AuthorizationStatus.CANCELED -> authorizations.table.id.isNotNull() and (authorizations.table.cancel eq true)
+                        }
+                    }
+                    this.andWhere { conditions.reduce{ acc, condition -> acc or condition } }
+                } ?: this
+            }
             .andWhere()
             {
                 case()
