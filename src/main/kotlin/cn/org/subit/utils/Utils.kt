@@ -62,14 +62,13 @@ fun String?.toUUIDOrNull(): UUID? = runCatching { UUID.fromString(this) }.getOrN
 inline fun <reified T: Enum<T>> String?.toEnumOrNull(): T? =
     this?.runCatching { contentNegotiationJson.decodeFromString<T>(this) }?.getOrNull()
 
-private val sendEmailScope = CoroutineScope(Dispatchers.IO + CoroutineExceptionHandler
-{ _, throwable ->
-    logger.severe("Failed to send email", throwable)
-})
-
-fun sendEmail(email: String, code: String, usage: EmailCodes.EmailCodeUsage) = sendEmailScope.async()
+fun sendEmail(email: String, code: String, usage: EmailCodes.EmailCodeUsage) = CoroutineScope(
+    Dispatchers.IO + CoroutineExceptionHandler { _, throwable ->
+        logger.severe("Failed to send email", throwable)
+    }
+).async()
 {
-    withTimeout(15.seconds)
+    withTimeout(20.seconds)
     {
         @Suppress("NAME_SHADOWING")
         val email = email.lowercase()
