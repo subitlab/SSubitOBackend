@@ -18,6 +18,11 @@ class Authorizations: SqlDao<Authorizations.AuthorizationTable>(AuthorizationTab
         val grantedAt = timestampWithTimeZone("granted_at").defaultExpression(CurrentTimestampWithTimeZone)
         val cancel = bool("cancel").default(false)
         override val primaryKey = PrimaryKey(id)
+
+        init
+        {
+            uniqueIndex(user, service)
+        }
     }
 
     private fun deserialize(row: ResultRow) = AuthorizationInfo(
@@ -47,11 +52,6 @@ class Authorizations: SqlDao<Authorizations.AuthorizationTable>(AuthorizationTab
     suspend fun revokeAuthorization(id: AuthorizationId): Boolean = query()
     {
         update({ AuthorizationTable.id eq id }) { it[cancel] = true } > 0
-    }
-
-    suspend fun revokeAuthorization(user: UserId, service: ServiceId): Boolean = query()
-    {
-        update({ (AuthorizationTable.user eq user) and (AuthorizationTable.service eq service) }) { it[cancel] = true } > 0
     }
 
     suspend fun getAuthorizations(user: UserId, begin: Long, count: Int): Slice<AuthorizationInfo> = query()
