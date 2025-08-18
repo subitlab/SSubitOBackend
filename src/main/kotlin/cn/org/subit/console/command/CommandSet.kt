@@ -25,7 +25,8 @@ object CommandSet: TreeCommand(
     Clear,
     Logger,
     Color,
-    TestDatabase
+    TestDatabase,
+    BatchImport
 )
 {
     private val logger = SSubitOLogger.getLogger()
