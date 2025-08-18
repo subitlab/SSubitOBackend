@@ -280,6 +280,16 @@ fun Route.serviceApi() = route("/serviceApi", {
             statuses(HttpStatus.BadRequest, HttpStatus.NotLoggedIn)
         }
     }) { getAvatar() }
+
+    get("/refreshServiceToken", {
+        description = "刷新服务token, 该接口需要在Authorization中添加服务token."
+        summary = "刷新服务token"
+        response()
+        {
+            statuses<JWTAuth.Token>(HttpStatus.OK, example = JWTAuth.Token("new-service-token"))
+            statuses(HttpStatus.NotLoggedIn)
+        }
+    }, Context::refreshServiceToken)
 }
 
 @Serializable
@@ -429,4 +439,11 @@ private fun Context.getAvatar()
     val avatar = getAvatar(id)
     if (!doNotCache) call.response.header(HttpHeaders.CacheControl, "max-age=${15*60}")
     finishCallWithBytes(HttpStatus.OK, ContentType.Image.PNG) { ImageIO.write(avatar, "png", this) }
+}
+
+private fun Context.refreshServiceToken()
+{
+    val service = getLoginService() ?: finishCall(HttpStatus.NotLoggedIn)
+    val token = JWTAuth.makeServiceToken(service.id)
+    finishCall(HttpStatus.OK, JWTAuth.Token(token.token))
 }
