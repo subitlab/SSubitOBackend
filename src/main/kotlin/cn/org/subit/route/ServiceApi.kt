@@ -440,7 +440,7 @@ private suspend fun Context.searchUserByStudentId(): Nothing
 }
 
 @Suppress("DuplicatedCode")
-private fun Context.getAvatar()
+private suspend fun Context.getAvatar()
 {
     val doNotCache: Boolean
     val id = (call.parameters["id"]?.toUserIdOrNull() ?: finishCall(HttpStatus.BadRequest)).let {

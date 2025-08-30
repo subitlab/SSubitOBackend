@@ -59,7 +59,7 @@ object JWTAuth: KoinComponent
     /**
      * 服务JWT Token有效期
      */
-     val SERVICE_TOKEN_VALIDITY: Duration = 180.days
+    val SERVICE_TOKEN_VALIDITY: Duration = 180.days
 
     /**
      * OAuth授权码有效期
