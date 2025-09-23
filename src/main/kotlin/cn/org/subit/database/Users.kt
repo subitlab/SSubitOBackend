@@ -47,9 +47,9 @@ class Users: SqlDao<Users.UserTable>(UserTable)
         phone = row[UserTable.phone] ?: ""
     )
 
-    suspend fun createUser(username: String, password: String): UserId = query()
+    suspend fun createUser(username: String, password: String?): UserId = query()
     {
-        val psw = JWTAuth.encryptPassword(password)
+        val psw = password?.let(JWTAuth::encryptPassword) ?: "no password"
         val time = Instant.fromEpochSeconds(Clock.System.now().epochSeconds, 0)
         insertAndGetId {
             it[UserTable.username] = username

@@ -112,7 +112,7 @@ fun Route.seiue() = route("/seiue", {
             body<SeiueLoginRequest>
             {
                 description = "希悦登陆/注册请求体"
-                example("example", SeiueLoginRequest(password = "password", email = "example@example.com", emailCode = "123456"))
+                example("example", SeiueLoginRequest(email = "example@example.com", emailCode = "123456"))
             }
         }
         response {
@@ -224,7 +224,6 @@ private suspend fun Context.postBind()
 
 @Serializable
 private data class SeiueLoginRequest(
-    val password: String? = null,
     val email: String? = null,
     val emailCode: String? = null,
 )
@@ -273,13 +272,13 @@ private suspend fun Context.seiueLogin()
 
         val body = call.receiveNullable<SeiueLoginRequest?>()
         val email = body?.email ?: seiue.email
-        if (email == null || body?.password == null)
-            finishCall(HttpStatus.OK.subStatus("需要密码或邮箱", 1), SeiueLoginResponse(needPassword = true, email = email))
+        if (email == null)
+            finishCall(HttpStatus.OK.subStatus("需要邮箱", 1), SeiueLoginResponse(email = email))
         val emailCodes: EmailCodes = get()
-        if (email != seiue.email && !emailCodes.verifyEmailCode(email, body.emailCode ?: "", EmailCodes.EmailCodeUsage.REGISTER))
+        if (email != seiue.email && !emailCodes.verifyEmailCode(email, body?.emailCode ?: "", EmailCodes.EmailCodeUsage.REGISTER))
             finishCall(HttpStatus.WrongEmailCode)
 
-        val newUser = users.createUser(seiue.name, body.password)
+        val newUser = users.createUser(seiue.name, null)
         emails.addEmail(newUser, email)
         studentIds.addStudentId(newUser, seiue)
         val token = JWTAuth.makeUserToken(newUser)
