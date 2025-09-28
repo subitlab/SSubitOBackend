@@ -273,13 +273,15 @@ private suspend fun Context.seiueLogin()
         val body = call.receiveNullable<SeiueLoginRequest?>()
         val email = body?.email ?: seiue.email
         if (email == null)
-            finishCall(HttpStatus.OK.subStatus("需要邮箱", 1), SeiueLoginResponse(email = email))
+            Unit // 希悦登陆不再需要绑定邮箱
+            // finishCall(HttpStatus.OK.subStatus("需要邮箱", 1), SeiueLoginResponse(email = email))
+
         val emailCodes: EmailCodes = get()
-        if (email != seiue.email && !emailCodes.verifyEmailCode(email, body?.emailCode ?: "", EmailCodes.EmailCodeUsage.REGISTER))
+        if (email != null && email != seiue.email && !emailCodes.verifyEmailCode(email, body?.emailCode ?: "", EmailCodes.EmailCodeUsage.REGISTER))
             finishCall(HttpStatus.WrongEmailCode)
 
         val newUser = users.createUser(seiue.name, null)
-        emails.addEmail(newUser, email)
+        if (email != null) emails.addEmail(newUser, email)
         studentIds.addStudentId(newUser, seiue)
         val token = JWTAuth.makeUserToken(newUser)
         finishCall(HttpStatus.OK, SeiueLoginResponse(token.token))
