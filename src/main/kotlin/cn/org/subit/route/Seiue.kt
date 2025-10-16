@@ -29,6 +29,7 @@ import io.ktor.client.call.*
 import io.ktor.client.engine.java.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.request.receiveNullable
@@ -168,18 +169,18 @@ data class RawSeiue(
     val name: String,
     val role: String,
     @SerialName("department_names")
-    val departmentNames: List<String>,
-    val pinyin: String?,
-    val gender: String?,
+    val departmentNames: List<String> = emptyList(),
+    val pinyin: String? = null,
+    val gender: String? = null,
     @SerialName("user_id")
     val userId: Int,
     val usin: String,
-    val ename: String?,
-    val email: String?,
-    val phone: String?,
-    val idcard: String?,
-    val photo: String?,
-    val status: String?,
+    val ename: String? = null,
+    val email: String? = null,
+    val phone: String? = null,
+    val idcard: String? = null,
+    val photo: String? = null,
+    val status: String? = null,
     @SerialName("archived_type_id")
     val archivedTypeId: Int? = null,
     @SerialName("archived_type")
@@ -247,7 +248,16 @@ private suspend fun Context.seiueLogin()
         header("X-Reflection-Id", activeReflectionId)
     }
 
-    val seiue = runCatching { response.body<RawSeiue>() }.getOrNull() ?: finishCall(HttpStatus.BadRequest.subStatus("seiue token 无效", 3))
+    if (!response.status.isSuccess())
+    {
+        logger.warning("failed to get info from seiue: ")
+    }
+
+    val seiue = runCatching()
+    {
+        val text = response.bodyAsText()
+        contentNegotiationJson.decodeFromString<RawSeiue>(text)
+    }.onFailure { logger.warning("error in parse seiue", it) }.getOrNull() ?: finishCall(HttpStatus.BadRequest.subStatus("seiue token 无效", 3))
 
     val studentIds = get<StudentIds>()
     val emails = get<Emails>()
