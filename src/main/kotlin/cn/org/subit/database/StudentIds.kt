@@ -22,6 +22,7 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
     object StudentIdTable: IdTable<String>("student_id")
     {
         val studentId = varchar("student_id", 40).entityId()
+        val school = integer("school").index()
         val user = reference("user", UserTable).index()
         val realName = varchar("real_name", 100).index()
         val role = enumerationByName<UserFull.Seiue.Role>("role", 16).index().default(UserFull.Seiue.Role.UNKNOWN)
@@ -53,12 +54,18 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
         select(user).where { table.studentId eq studentId }.singleOrNull()?.get(user)?.value
     }
 
+    suspend inline fun getStudentSchool(studentId: String): Int? = query()
+    {
+        select(school).where { table.studentId eq studentId }.singleOrNull()?.get(school)
+    }
+
     suspend inline fun addStudentId(userId: UserId, seiue: RawSeiue): Boolean = query()
     {
         val res = insertIgnoreAndGetId()
         {
             it[table.user] = userId
             it[table.studentId] = seiue.usin
+            it[table.school] = seiue.schoolId
             it[table.realName] = seiue.name
             it[table.role] = UserFull.Seiue.Role.fromSeiueRole(seiue.role)
             it[table.archived] = !seiue.status.equals("normal", true)
@@ -73,6 +80,7 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
         update({ table.studentId eq seiue.usin })
         {
             it[realName] = seiue.name
+            it[school] = seiue.schoolId
             it[role] = UserFull.Seiue.Role.fromSeiueRole(seiue.role)
             it[archived] = !seiue.status.equals("normal", true)
             it[rawData] = seiue

@@ -73,7 +73,7 @@ fun Route.seiue() = route("/seiue", {
         finishCallWithRedirect(
             "https://passport.seiue.com/authorize?response_type=token" +
             "&client_id=${systemConfig.clientId}" +
-            "&school_id=${systemConfig.schoolId}" +
+//            "&school_id=${systemConfig.schoolId}" +
             redirect
         )
     }
@@ -211,11 +211,13 @@ private suspend fun Context.postBind()
     val seiue = runCatching { response.body<RawSeiue>() }.getOrNull() ?: finishCall(HttpStatus.BadRequest.copy(message = "seiue token 无效"))
     val studentIds = get<StudentIds>()
 
-    if (seiue.schoolId != systemConfig.schoolId)
+    if (seiue.schoolId !in systemConfig.schoolId)
         finishCall(HttpStatus.BadRequest.copy(message = "学校不匹配"))
 
     addBindLocks.withLock(seiue.usin)
     {
+        if (studentIds.getStudentSchool(seiue.usin) !in listOf(seiue.schoolId, null))
+            finishCall(HttpStatus.Conflict.subStatus("学工号冲突，请联系管理员"))
         if (studentIds.addStudentId(loginUser.id, seiue))
             finishCall(HttpStatus.OK, "学号添加成功")
         else
@@ -263,7 +265,7 @@ private suspend fun Context.seiueLogin()
     val emails = get<Emails>()
     val users = get<Users>()
 
-    if (seiue.schoolId != systemConfig.schoolId)
+    if (seiue.schoolId !in systemConfig.schoolId)
         finishCall(HttpStatus.BadRequest.subStatus("学校不匹配", 5))
 
     logger.fine("Seiue login: ${seiue.usin}(${seiue.name}) - ${seiue.email ?: "无邮箱"}")
@@ -273,6 +275,8 @@ private suspend fun Context.seiueLogin()
         val user = studentIds.getStudentIdUsers(seiue.usin) ?: seiue.email?.let { emails.getEmailUser(it) }
         if (user != null)
         {
+            if (studentIds.getStudentSchool(seiue.usin) !in listOf(seiue.schoolId, null))
+                finishCall(HttpStatus.Conflict.subStatus("学工号冲突，请联系管理员"))
             studentIds.addStudentId(user, seiue)
             seiue.email?.let { emails.addEmail(user, it) }
 

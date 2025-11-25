@@ -40,41 +40,40 @@ class Users: SqlDao<Users.UserTable>(UserTable)
     private val authorizations: Authorizations by inject()
 
     private fun deserialize(row: ResultRow) = UserInfo(
-        id = row[UserTable.id].value,
-        username = row[UserTable.username],
-        registrationTime = row[UserTable.registrationTime].toEpochMilliseconds(),
-        permission = row[UserTable.permission],
-        phone = row[UserTable.phone] ?: ""
+        id = row[table.id].value,
+        username = row[table.username],
+        registrationTime = row[table.registrationTime].toEpochMilliseconds(),
+        permission = row[table.permission],
+        phone = row[table.phone] ?: ""
     )
 
     suspend fun createUser(username: String, password: String?): UserId = query()
     {
         val psw = password?.let(JWTAuth::encryptPassword) ?: "no password"
-        val time = Instant.fromEpochSeconds(Clock.System.now().epochSeconds, 0)
         insertAndGetId {
-            it[UserTable.username] = username
-            it[UserTable.password] = psw
+            it[table.username] = username
+            it[table.password] = psw
             it[table.registrationTime] = Clock.System.now()
-            it[UserTable.lastPasswordChange] = time
+            it[table.lastPasswordChange] = Instant.fromEpochSeconds(0)
         }.value
     }
 
     suspend fun setUsername(id: UserId, username: String): Boolean = query()
     {
-        update({ UserTable.id eq id }) { it[UserTable.username] = username } > 0
+        update({ table.id eq id }) { it[table.username] = username } > 0
     }
 
     suspend fun getUser(id: UserId): UserInfo? = query()
     {
-        selectAll().where { UserTable.id eq id }.singleOrNull()?.let(::deserialize)
+        selectAll().where { table.id eq id }.singleOrNull()?.let(::deserialize)
     }
 
     suspend fun setPassword(id: UserId, password: String): Boolean = query()
     {
         val psw = JWTAuth.encryptPassword(password)
         val time = Instant.fromEpochSeconds(Clock.System.now().epochSeconds, 0)
-        update({ UserTable.id eq id }) {
-            it[UserTable.password] = psw
+        update({ table.id eq id }) {
+            it[table.password] = psw
             it[lastPasswordChange] = time
         } > 0
     }
@@ -87,7 +86,7 @@ class Users: SqlDao<Users.UserTable>(UserTable)
             .join(emails.table, JoinType.RIGHT, table.id, emails.table.user)
             .update({ emails.table.email eq email.lowercase() })
             {
-                it[UserTable.password] = psw
+                it[table.password] = psw
                 it[lastPasswordChange] = time
             } > 0
     }
@@ -98,7 +97,7 @@ class Users: SqlDao<Users.UserTable>(UserTable)
     suspend fun getUserWithLastPasswordChange(id: UserId): Pair<UserInfo, Instant>? = query()
     {
         selectAll()
-            .where { UserTable.id eq id }
+            .where { table.id eq id }
             .singleOrNull()
             ?.let { deserialize(it) to it[lastPasswordChange] }
     }

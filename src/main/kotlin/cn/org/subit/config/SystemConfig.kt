@@ -6,7 +6,7 @@ import kotlinx.serialization.Transient
 @Serializable
 data class SystemConfig(
     val clientId: String,
-    val schoolId: Int,
+    val schoolId: List<Int>,
     val frontendPattern: String,
 )
 {
@@ -19,7 +19,7 @@ var systemConfig: SystemConfig by config(
     "system.yml",
     SystemConfig(
         "",
-        0,
+        listOf(1,2,3),
         "https://(pkus\\.)?sso\\.subit\\.org\\.cn(/.*)?"
     )
 )
