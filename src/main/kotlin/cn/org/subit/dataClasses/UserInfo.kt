@@ -66,6 +66,7 @@ data class UserFull(
     data class Seiue(
         val studentId: String,
         val realName: String,
+        val schoolId: Int,
         val role: Role,
         val archived: Boolean,
     )
@@ -121,7 +122,7 @@ data class UserFull(
             email = listOf("email1@example.com", "email2@example.com", "email3@example.com"),
             phone = "12345678901",
             username = "username",
-            seiue = listOf(Seiue("studentId", "realName", Seiue.Role.STUDENT, false)),
+            seiue = listOf(Seiue("studentId", "realName", 3, Seiue.Role.STUDENT, false)),
             permission = Permission.NORMAL,
             registrationTime = System.currentTimeMillis()
         )

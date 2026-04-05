@@ -50,12 +50,12 @@ fun Route.basic() = route("/auth", {
     }) { register() }
 
     post("/login", {
-        description = "登陆, 若成功返回token"
+        description = "登录, 若成功返回token"
         request {
             body<Login>()
             {
                 required = true
-                description = "登陆信息, id(用户ID)和email(用户的邮箱)和studentId(学号)三选一"
+                description = "登陆信息, id(用户ID)和email(用户的邮箱)和studentId+schoolId(学号+学号)三选一"
                 example("example", Login(email = "email", password = "password"))
             }
         }
@@ -218,6 +218,7 @@ private data class Login(
     val email: String? = null,
     val id: UserId? = null,
     val studentId: String? = null,
+    val schoolId: Int? = null,
     val password: String
 )
 
@@ -227,8 +228,8 @@ private suspend fun Context.login()
     val loginInfo = call.receive<Login>()
     val checked = if (loginInfo.id != null) loginInfo.id.takeIf { users.checkLogin(loginInfo.id, loginInfo.password) }
     else if (loginInfo.email != null) users.checkLoginByEmail(loginInfo.email, loginInfo.password)
-    else if (loginInfo.studentId != null) users.checkLoginByStudentId(loginInfo.studentId, loginInfo.password)
-    else finishCall(HttpStatus.BadRequest.copy(message = "请提供用户ID、邮箱或学号"))
+    else if (loginInfo.studentId != null && loginInfo.schoolId != null) users.checkLoginByStudentId(loginInfo.studentId, loginInfo.schoolId, loginInfo.password)
+    else finishCall(HttpStatus.BadRequest.copy(message = "请提供用户ID、邮箱或学号+学号"))
     // 若登陆失败，返回错误信息
     if (checked == null) finishCall(HttpStatus.PasswordError)
     if (users.getUser(checked)?.permission == Permission.BANNED) finishCall(HttpStatus.Prohibit)

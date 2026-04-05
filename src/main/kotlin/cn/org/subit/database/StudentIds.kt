@@ -9,7 +9,6 @@ import cn.org.subit.database.utils.singleOrNull
 import cn.org.subit.plugin.contentNegotiation.dataJson
 import cn.org.subit.route.seiue.RawSeiue
 import kotlinx.serialization.serializer
-import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.isNotNull
@@ -19,17 +18,20 @@ import org.koin.core.component.inject
 
 class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
 {
-    object StudentIdTable: IdTable<String>("student_id")
+    object StudentIdTable: Table("student_id")
     {
-        val studentId = varchar("student_id", 40).entityId()
+        val studentId = varchar("student_id", 40)
         val school = integer("school").index()
         val user = reference("user", UserTable).index()
         val realName = varchar("real_name", 100).index()
         val role = enumerationByName<UserFull.Seiue.Role>("role", 16).index().default(UserFull.Seiue.Role.UNKNOWN)
         val archived = bool("archived").default(false).index()
         val rawData = jsonb<RawSeiue>("raw_data", dataJson, dataJson.serializersModule.serializer())
-        override val id = studentId
-        override val primaryKey = PrimaryKey(id)
+
+        init
+        {
+            uniqueIndex(studentId, school)
+        }
     }
 
     private val services: Services by inject()
@@ -37,31 +39,30 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
 
     suspend fun getSeiue(userId: UserId): List<UserFull.Seiue> = query()
     {
-        select(studentId, realName, role, archived)
+        select(studentId, school, realName, role, archived)
             .where { user eq userId }
             .map { row ->
                 UserFull.Seiue(
-                    studentId = row[studentId].value,
+                    studentId = row[studentId],
                     realName = row[realName],
                     role = row[role],
                     archived = row[archived],
+                    schoolId = row[school],
                 )
             }
     }
 
-    suspend fun getStudentIdUsers(studentId: String): UserId? = query()
+    suspend fun getStudentIdUsers(studentId: String, schoolId: Int): UserId? = query()
     {
-        select(user).where { table.studentId eq studentId }.singleOrNull()?.get(user)?.value
-    }
-
-    suspend inline fun getStudentSchool(studentId: String): Int? = query()
-    {
-        select(school).where { table.studentId eq studentId }.singleOrNull()?.get(school)
+        select(user)
+            .where {
+            (table.studentId eq studentId) and (table.school eq schoolId)
+        }.singleOrNull()?.get(user)?.value
     }
 
     suspend inline fun addStudentId(userId: UserId, seiue: RawSeiue): Boolean = query()
     {
-        val res = insertIgnoreAndGetId()
+        val res = insertIgnore()
         {
             it[table.user] = userId
             it[table.studentId] = seiue.usin
@@ -70,14 +71,14 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
             it[table.role] = UserFull.Seiue.Role.fromSeiueRole(seiue.role)
             it[table.archived] = !seiue.status.equals("normal", true)
             it[table.rawData] = seiue
-        } != null
+        }.insertedCount > 0
         if (!res) updateSeiue(seiue)
         res
     }
 
     suspend fun updateSeiue(seiue: RawSeiue) = query()
     {
-        update({ table.studentId eq seiue.usin })
+        update({ table.studentId eq seiue.usin and (table.school eq seiue.schoolId) })
         {
             it[realName] = seiue.name
             it[school] = seiue.schoolId
@@ -87,14 +88,14 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
         } > 0
     }
 
-    suspend fun getStudentIdCount(userId: UserId): Long = query()
+    suspend fun getStudentIdCount(userId: UserId, schoolId: Int): Long = query()
     {
-        selectAll().where { user eq userId }.count()
+        selectAll().where { user eq userId and (school eq schoolId) }.count()
     }
 
-    suspend fun removeStudentId(userId: UserId, studentId: String): Boolean = query()
+    suspend fun removeStudentId(userId: UserId, studentId: String, schoolId: Int): Boolean = query()
     {
-        deleteWhere { (user eq userId) and (table.studentId eq studentId) } > 0
+        deleteWhere { (user eq userId) and (table.studentId eq studentId) and (table.school eq schoolId) } > 0
     }
 
     suspend fun searchUserByStudentId(sid: String, service: ServiceId, begin: Long, count: Int, authorizationStatuses: List<AuthorizationStatus>?): Slice<UserId> = query()

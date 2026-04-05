@@ -5,18 +5,13 @@ package cn.org.subit.route.seiue
 import cn.org.subit.JWTAuth
 import cn.org.subit.JWTAuth.getLoginUser
 import cn.org.subit.config.systemConfig
-import cn.org.subit.dataClasses.UserId
 import cn.org.subit.database.EmailCodes
 import cn.org.subit.database.Emails
 import cn.org.subit.database.StudentIds
 import cn.org.subit.database.Users
 import cn.org.subit.logger.SSubitOLogger
 import cn.org.subit.plugin.contentNegotiation.contentNegotiationJson
-import cn.org.subit.route.utils.Context
-import cn.org.subit.route.utils.example
-import cn.org.subit.route.utils.finishCall
-import cn.org.subit.route.utils.finishCallWithRedirect
-import cn.org.subit.route.utils.get
+import cn.org.subit.route.utils.*
 import cn.org.subit.utils.HttpStatus
 import cn.org.subit.utils.Locks
 import cn.org.subit.utils.statuses
@@ -29,10 +24,10 @@ import io.ktor.client.call.*
 import io.ktor.client.engine.java.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
-import io.ktor.client.statement.bodyAsText
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import io.ktor.server.request.receiveNullable
+import io.ktor.server.request.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -139,6 +134,11 @@ fun Route.seiue() = route("/seiue", {
                 required = true
                 description = "学号"
             }
+            queryParameter<Int>("schoolId")
+            {
+                required = true
+                description = "学校ID"
+            }
         }
         response {
             statuses(HttpStatus.OK, HttpStatus.BadRequest)
@@ -214,10 +214,8 @@ private suspend fun Context.postBind()
     if (seiue.schoolId !in systemConfig.schoolId)
         finishCall(HttpStatus.BadRequest.copy(message = "学校不匹配"))
 
-    addBindLocks.withLock(seiue.usin)
+    addBindLocks.withLock(makeLockString( seiue.schoolId, seiue.usin) )
     {
-        if (studentIds.getStudentSchool(seiue.usin) !in listOf(seiue.schoolId, null))
-            finishCall(HttpStatus.Conflict.subStatus("学工号冲突，请联系管理员"))
         if (studentIds.addStudentId(loginUser.id, seiue))
             finishCall(HttpStatus.OK, "学号添加成功")
         else
@@ -237,6 +235,8 @@ private data class SeiueLoginResponse(
     val needPassword: Boolean = false,
     val email: String? = null,
 )
+
+private fun makeLockString(schoolId: Int, usin: String) = "$schoolId-$usin"
 
 private suspend fun Context.seiueLogin()
 {
@@ -270,13 +270,11 @@ private suspend fun Context.seiueLogin()
 
     logger.fine("Seiue login: ${seiue.usin}(${seiue.name}) - ${seiue.email ?: "无邮箱"}")
 
-    addBindLocks.withLock(seiue.usin)
+    addBindLocks.withLock( makeLockString(seiue.schoolId, seiue.usin) )
     {
-        val user = studentIds.getStudentIdUsers(seiue.usin) ?: seiue.email?.let { emails.getEmailUser(it) }
+        val user = studentIds.getStudentIdUsers(seiue.usin, seiue.schoolId) ?: seiue.email?.let { emails.getEmailUser(it) }
         if (user != null)
         {
-            if (studentIds.getStudentSchool(seiue.usin) !in listOf(seiue.schoolId, null))
-                finishCall(HttpStatus.Conflict.subStatus("学工号冲突，请联系管理员"))
             studentIds.addStudentId(user, seiue)
             seiue.email?.let { emails.addEmail(user, it) }
 
@@ -302,19 +300,20 @@ private suspend fun Context.seiueLogin()
     }
 }
 
-private val deleteBindLocks = Locks<UserId>()
+private val deleteBindLocks = Locks<String>()
 
 private suspend fun Context.deleteBind()
 {
     val loginUser = getLoginUser() ?: finishCall(HttpStatus.NotLoggedIn)
     val studentId = call.request.queryParameters["studentId"] ?: finishCall(HttpStatus.BadRequest)
+    val schoolId = call.request.queryParameters["schoolId"]?.toIntOrNull() ?: finishCall(HttpStatus.BadRequest)
     val studentIds = get<StudentIds>()
 
-    deleteBindLocks.withLock(loginUser.id)
+    deleteBindLocks.withLock(makeLockString(schoolId, studentId))
     {
-        if (studentIds.getStudentIdCount(loginUser.id) >= 2)
+        if (studentIds.getStudentIdCount(loginUser.id, schoolId) >= 2)
         {
-            if (studentIds.removeStudentId(loginUser.id, studentId)) finishCall(HttpStatus.OK)
+            if (studentIds.removeStudentId(loginUser.id, studentId, schoolId)) finishCall(HttpStatus.OK)
             else finishCall(HttpStatus.NotFound)
         }
         else finishCall(HttpStatus.BadRequest.copy(message = "无法解绑唯一的希悦账号"))

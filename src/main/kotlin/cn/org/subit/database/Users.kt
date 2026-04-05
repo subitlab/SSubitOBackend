@@ -131,12 +131,12 @@ class Users: SqlDao<Users.UserTable>(UserTable)
         return@query if (JWTAuth.verifyPassword(password, psw)) id else null
     }
 
-    suspend fun checkLoginByStudentId(studentId: String, password: String): UserId? = query()
+    suspend fun checkLoginByStudentId(studentId: String, schoolId: Int, password: String): UserId? = query()
     {
         val (id, psw) = table
             .join(studentIds.table, JoinType.RIGHT, table.id, studentIds.table.user)
             .select(table.password, table.id)
-            .where { studentIds.table.studentId eq studentId }
+            .where { studentIds.table.studentId eq studentId and (studentIds.table.school eq schoolId) }
             .singleOrNull()
             ?.let { it[table.id].value to it[table.password] } ?: return@query null
         return@query if (JWTAuth.verifyPassword(password, psw)) id else null
