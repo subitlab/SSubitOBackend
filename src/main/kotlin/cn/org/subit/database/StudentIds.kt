@@ -9,6 +9,7 @@ import cn.org.subit.database.utils.singleOrNull
 import cn.org.subit.plugin.contentNegotiation.dataJson
 import cn.org.subit.route.seiue.RawSeiue
 import kotlinx.serialization.serializer
+import org.jetbrains.exposed.dao.id.CompositeIdTable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.isNotNull
@@ -18,7 +19,7 @@ import org.koin.core.component.inject
 
 class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
 {
-    object StudentIdTable: Table("student_id")
+    object StudentIdTable: CompositeIdTable("student_id")
     {
         val studentId = varchar("student_id", 40)
         val school = integer("school").index()
@@ -27,6 +28,8 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
         val role = enumerationByName<UserFull.Seiue.Role>("role", 16).index().default(UserFull.Seiue.Role.UNKNOWN)
         val archived = bool("archived").default(false).index()
         val rawData = jsonb<RawSeiue>("raw_data", dataJson, dataJson.serializersModule.serializer())
+
+        override val primaryKey = PrimaryKey(studentId, school)
 
         init
         {
