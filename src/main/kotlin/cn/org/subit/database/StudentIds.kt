@@ -21,8 +21,8 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
 {
     object StudentIdTable: CompositeIdTable("student_id")
     {
-        val studentId = varchar("student_id", 40)
-        val school = integer("school").index()
+        val studentId = varchar("student_id", 40).entityId().index()
+        val school = integer("school").entityId().index()
         val user = reference("user", UserTable).index()
         val realName = varchar("real_name", 100).index()
         val role = enumerationByName<UserFull.Seiue.Role>("role", 16).index().default(UserFull.Seiue.Role.UNKNOWN)
@@ -33,6 +33,8 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
 
         init
         {
+            addIdColumn(school)
+            addIdColumn(studentId)
             uniqueIndex(studentId, school)
         }
     }
@@ -46,11 +48,11 @@ class StudentIds: SqlDao<StudentIds.StudentIdTable>(StudentIdTable)
             .where { user eq userId }
             .map { row ->
                 UserFull.Seiue(
-                    studentId = row[studentId],
+                    studentId = row[studentId].value,
                     realName = row[realName],
                     role = row[role],
                     archived = row[archived],
-                    schoolId = row[school],
+                    schoolId = row[school].value,
                 )
             }
     }
