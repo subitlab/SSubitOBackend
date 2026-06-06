@@ -57,9 +57,9 @@ object JWTAuth: KoinComponent
     val USER_TOKEN_VALIDITY: Duration = 90.days
 
     /**
-     * 服务JWT Token有效期
+     * 服务JWT Token有效期（永不过期）
      */
-    val SERVICE_TOKEN_VALIDITY: Duration = 180.days
+    val SERVICE_TOKEN_VALIDITY: Duration = Duration.INFINITE
 
     /**
      * OAuth授权码有效期
@@ -135,7 +135,10 @@ object JWTAuth: KoinComponent
         .withSubject("Authentication")
         .withClaim("type", type.name)
         .apply { claims.forEach { (k, v) -> withClaim(k, v) } }
-        .withExpiresAt((OffsetDateTime.now().toInstant().toKotlinInstant() + validity).toJavaInstant())
+        .apply {
+            if (!validity.isInfinite())
+                withExpiresAt((OffsetDateTime.now().toInstant().toKotlinInstant() + validity).toJavaInstant())
+        }
         .withIssuer("subit")
         .withIssuedAt(OffsetDateTime.now().toInstant())
         .sign(algorithm)
